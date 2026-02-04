@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { Camera, FolderPlus, Link as LinkIcon, Plus, ArrowUp, Menu } from 'lucide-react';
 
 const AssistantAi = () => {
   const [messages, setMessages] = useState([
@@ -42,7 +43,6 @@ const AssistantAi = () => {
     }
   };
 
-  // 링크 입력 처리
   const handleLinkAdd = () => {
     const url = window.prompt("URL 주소를 입력해주세요:");
     if (url) {
@@ -52,29 +52,27 @@ const AssistantAi = () => {
   };
 
   return (
-    <div className="min-w-[486px] bg-[##FBFDFF]">
-      <div className="flex flex-row">
-        <img src="../src/assets/icons/icon-menu.svg" />
-        <div alt="제목">AI 어시스턴트</div>
-      </div>
+    // 👇 부모 컨테이너에 꽉 차게 h-full 및 flex 구조 적용
+    <div className="flex flex-col h-full bg-[#FBFDFF] w-full relative">
 
-      <div alt="본문" ref={scrollRef}>
+      {/* 채팅 스크롤 영역 */}
+      <div className="flex-1 overflow-y-auto custom-scrollbar p-2" ref={scrollRef}>
         {messages.map((msg) => (
           <div
             key={msg.id}
             className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
           >
             <div
-              className={`max-w-[85%] p-4 rounded-[8px] mx-[20px] my-[12px] text-sm leading-relaxed ${
+              className={`max-w-[85%] p-4 mx-2 my-2 text-sm leading-relaxed shadow-sm ${
                 msg.role === "user"
-                  ? "bg-gray-200 text-[#232323] rounded-[8px]"
-                  : "bg-white border-1 border-[#EEEEEE] text-[#232323] rounded-[8px]"
+                  ? "bg-gray-800 text-white rounded-[20px] rounded-tr-none"
+                  : "bg-white border border-[#EEEEEE] text-[#232323] rounded-[20px] rounded-tl-none"
               }`}
             >
               {msg.content}
               {msg.attachment && (
-                <div className="mt-2 pt-2 border-t border-gray-300/30 text-[11px] flex items-center gap-1 opacity-80">
-                  {msg.attachment.name}
+                <div className="mt-2 pt-2 border-t border-white/20 text-[11px] flex items-center gap-1 opacity-80">
+                  {msg.attachment.type === 'link' ? '🔗' : '📁'} {msg.attachment.name}
                 </div>
               )}
             </div>
@@ -82,9 +80,10 @@ const AssistantAi = () => {
         ))}
       </div>
 
-      <div alt="입력창" className="bg-white relative m-[25px]">
+      {/* 입력창 영역 */}
+      <div className="bg-white p-4 m-4 rounded-[24px] shadow-lg border border-gray-100 relative shrink-0">
         {selectedItem && (
-          <div className="absolute bottom-full left-5 mb-2 flex items-center gap-2 bg-gray-800 text-white px-3 py-1.5 rounded-full text-xs animate-in fade-in slide-in-from-bottom-1">
+          <div className="absolute bottom-full left-0 mb-2 flex items-center gap-2 bg-gray-800 text-white px-3 py-1.5 rounded-full text-xs animate-fade-in">
             <span>
               {selectedItem.type === "link" ? "🔗" : "📁"} {selectedItem.name}
             </span>
@@ -97,7 +96,6 @@ const AssistantAi = () => {
           </div>
         )}
 
-        {/* 숨겨진 파일 인풋 */}
         <input
           type="file"
           accept="image/*"
@@ -112,68 +110,58 @@ const AssistantAi = () => {
           onChange={(e) => handleFileChange(e, "file")}
         />
 
+        {/* 플러스 메뉴 팝업 */}
         {isMenuOpen && (
-          <div className="absolute bottom-[70px] left-5 bg-white rounded-2xl shadow-md shadow-[#00000008] p-[12px] min-w-[180px] border border-gray-100 z-50 animate-in fade-in slide-in-from-bottom-2">
+          <div className="absolute bottom-[80px] left-0 bg-white rounded-2xl shadow-xl border border-gray-100 p-2 min-w-[180px] z-50 animate-fade-in-up">
             <button
               onClick={() => imageInputRef.current.click()}
-              className="flex items-center gap-[13px] w-full p-2.5 hover:bg-gray-50 rounded-xl text-sm text-[#949393] transition-colors"
+              className="flex items-center gap-3 w-full p-2.5 hover:bg-gray-50 rounded-xl text-sm text-gray-600 transition-colors"
             >
-              <img
-                className="w-[20px]"
-                src="../src/assets/icons/icon-camera.svg"
-                alt=""
-              />
-              <div className="whitespace-nowrap">사진 첨부</div>
+              <Camera size={18} />
+              <span>사진 첨부</span>
             </button>
             <button
               onClick={() => fileInputRef.current.click()}
-              className="flex items-center gap-[13px] w-full p-2.5 hover:bg-gray-50 rounded-xl text-sm text-[#949393] transition-colors"
+              className="flex items-center gap-3 w-full p-2.5 hover:bg-gray-50 rounded-xl text-sm text-gray-600 transition-colors"
             >
-              <img
-                className="w-[20px]"
-                src="../src/assets/icons/icon-folder-plus.svg"
-                alt=""
-              />
-              <div className="whitespace-nowrap">파일 첨부(pdf,word)</div>
+              <FolderPlus size={18} />
+              <span>파일 첨부</span>
             </button>
             <button
               onClick={handleLinkAdd}
-              className="flex items-center gap-[13px] w-full p-2.5 hover:bg-gray-50 rounded-xl text-sm text-[#949393] transition-colors"
+              className="flex items-center gap-3 w-full p-2.5 hover:bg-gray-50 rounded-xl text-sm text-gray-600 transition-colors"
             >
-              <img
-                className="w-[20px]"
-                src="../src/assets/icons/icon-paperclip.svg"
-                alt=""
-              />
-              <div className="whitespace-nowrap">링크 첨부</div>
+              <LinkIcon size={18} />
+              <span>링크 첨부</span>
             </button>
           </div>
         )}
 
-        <div className="flex items-center gap-2 bg-gray-100 rounded-full pr-2 pl-4 py-2">
+        <div className="flex items-center gap-2">
           <button
             onClick={() => setIsMenuOpen(!isMenuOpen)}
-            className={`transition-transform ${isMenuOpen ? "rotate-45" : ""}`}
+            className={`p-2 rounded-full hover:bg-gray-100 transition-all ${isMenuOpen ? "rotate-45 bg-gray-100" : ""}`}
           >
-            <span
-              className={`text-2xl text-gray-500 font-light ${isMenuOpen && "rotate-45"}`}
-            >
-              <img src="../src/assets/icons/icon-plus.svg" />
-            </span>
+            <Plus size={24} className="text-gray-400" />
           </button>
+          
           <input
             type="text"
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             placeholder="메시지를 입력하세요..."
-            className="flex-1 bg-transparent outline-none text-sm py-2"
+            className="flex-1 bg-transparent outline-none text-sm text-gray-700"
             onKeyPress={(e) => e.key === "Enter" && handleSendMessage()}
           />
+          
           <button
             onClick={handleSendMessage}
-            className="bg-[#575757] p-2 rounded-full text-white hover:bg-gray-700 transition-colors"
+            disabled={!inputValue.trim()}
+            className={`p-2 rounded-full transition-colors ${
+                inputValue.trim() ? 'bg-gray-800 hover:bg-black text-white' : 'bg-gray-200 text-gray-400'
+            }`}
           >
-            <img src="../src/assets/icons/icon-arrow-up.svg" />
+            <ArrowUp size={20} strokeWidth={2.5} />
           </button>
         </div>
       </div>
