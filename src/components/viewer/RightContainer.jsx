@@ -116,10 +116,7 @@ const RightContainer = () => {
   [notes, expandedNoteId]);
 
   return (
-    <div 
-      className="rounded-lg w-full h-full flex flex-col p-6 relative"
-      style={{ height: '100%', backgroundColor: '#FBFDFF' }} 
-    >
+    <div className="w-full h-full flex flex-col relative bg-[#FBFDFF] rounded-2xl overflow-hidden">
       {deletingNoteId && (
         <div className="absolute inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-[2px] animate-fade-in">
           <div className="bg-white rounded-[16px] p-6 shadow-2xl w-[320px] flex flex-col items-center animate-scale-in">
@@ -183,7 +180,6 @@ const RightContainer = () => {
                     editingNote={editingNote}
                     onDeleteRequest={handleDeleteRequest}
                     onEditStart={handleEditStart}
-                    // 👇 [핵심] 여기서 setExpandedNoteId를 전달해야 NoteItemList가 받아서 NoteItem에게 줍니다.
                     onNoteExpand={(id) => setExpandedNoteId(id)} 
                 />
             )
