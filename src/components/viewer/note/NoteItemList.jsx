@@ -82,7 +82,7 @@ const NoteItemList = ({
         </div>
 
         {/* 하단 입력/버튼 영역 */}
-        <div className="shrink-0 z-30 bg-[#F5F6F8]">
+        <div className="shrink-0 z-30 bg-[#FBFDFF]">
             {isAdding ? (
                 <div className="pb-4 pr-4"> 
                     <NoteInput 
