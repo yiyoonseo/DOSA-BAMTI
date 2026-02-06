@@ -127,7 +127,7 @@ const NoteInput = ({ onSave, onCancel, initialData = null, onOpenAiNote, isAiNot
           autoFocus
         />
 
-        <div className="h-[1px] w-full bg-white mb-3 opacity-50"></div>
+        <div className="h-[1px] w-full bg-main-3 mb-3 opacity-50"></div>
 
         {/* 사진 미리보기 영역 (본문 위) */}
         {imageAttachments.length > 0 && (
@@ -177,7 +177,7 @@ const NoteInput = ({ onSave, onCancel, initialData = null, onOpenAiNote, isAiNot
                  <div className="relative">
                     <button 
                         onClick={() => setIsAttachMenuOpen(!isAttachMenuOpen)}
-                        className={`w-8 h-8 rounded-full bg-white flex items-center justify-center text-gray-800 transition-transform ${isAttachMenuOpen ? 'rotate-45' : ''}`}
+                        className={`w-8 h-8 rounded-full bg-bg-2 flex items-center justify-center text-gray-800 transition-transform ${isAttachMenuOpen ? 'rotate-45' : ''}`}
                     >
                         <Plus size={18} />
                     </button>
