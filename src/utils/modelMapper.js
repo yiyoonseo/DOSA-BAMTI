@@ -34,21 +34,23 @@ const SUSPENSION_FILE_MAP = {
   'spring': 'spring.glb',
 };
 
-// 👇 V4 Engine 파일명 매핑
+// 👇 V4 Engine 파일 매핑 추가
 const V4_ENGINE_FILE_MAP = {
-  'connecting_rod': 'connecting_rod.glb',
-  'connecting_rod_cap': 'connecting_rod_cap.glb',
-  'crankshaft': 'crankshaft.glb',
-  'piston': 'piston.glb',
-  'piston_pin': 'piston_pin.glb',
+  'connecting_rod_cap': 'Connecting Rod Cap.glb',
+  'connecting_rod': 'Connecting Rod.glb',
+  'conrod_bolt': 'Conrod Bolt.glb',
+  'crankshaft': 'Crankshaft.glb',
+  'piston_pin': 'Piston Pin.glb',
+  'piston_ring': 'Piston Ring.glb',
+  'piston': 'Piston.glb',
 };
 
-// 👇 모델별 매핑 선택
-const FILE_MAP_BY_MODEL = {
-  'Machine Vice': MACHINE_VICE_FILE_MAP,
+// FILE_MAP_BY_MODEL 업데이트
+export const FILE_MAP_BY_MODEL = {
   'Drone': DRONE_FILE_MAP,
   'Suspension': SUSPENSION_FILE_MAP,
-  'V4 Engine': V4_ENGINE_FILE_MAP,
+  'Machine Vice': MACHINE_VICE_FILE_MAP,
+  'V4 Engine': V4_ENGINE_FILE_MAP, // 👈 추가
 };
 
 /**

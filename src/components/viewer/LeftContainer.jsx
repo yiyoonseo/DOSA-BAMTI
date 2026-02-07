@@ -5,15 +5,12 @@ import AiNote from './ai/AiNote';
 import PartDetail from "../part/PartDetail";
 import PartList from "../part/PartList";
 import AiBriefing from "./ai/AiBriefing";
-import AnimationDebugger from "../debug/AnimationDebugger"; // 👈 추가
+import AnimationPlayer from "./AnimationPlayer";
+import AnimationSlider from "./AnimationSlider";
 import { mapModelData } from "../../utils/modelMapper";
 
 function SinglePartModel({ modelPath }) {
-  console.log('🔍 Loading model from:', modelPath);
-  if (!modelPath) {
-    console.warn('⚠️ modelPath is null or undefined');
-    return null;
-  }
+  if (!modelPath) return null;
   
   try {
     const { scene } = useGLTF(modelPath);
@@ -35,6 +32,11 @@ const LeftContainer = ({
   const [transformedParts, setTransformedParts] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
   const [showBriefing, setShowBriefing] = useState(true);
+  const [showAssembly, setShowAssembly] = useState(true);
+  
+  // 👇 애니메이션 상태 - isPlaying 제거
+  const [currentFrame, setCurrentFrame] = useState(0);
+  const [totalFrames] = useState(100);
 
   // async 데이터 변환
   useEffect(() => {
@@ -53,6 +55,28 @@ const LeftContainer = ({
   }, [apiData]);
 
   const currentPart = transformedParts.find((p) => p.id === selectedId);
+  const assemblyPart = transformedParts.find((p) => p.isAssembly);
+
+  // 👇 리셋만 남김
+  const handleReset = () => {
+    setCurrentFrame(0);
+  };
+
+  // 👇 슬라이더 변경
+  const handleFrameChange = (frame) => {
+    setCurrentFrame(frame);
+  };
+
+  const handlePartSelect = (partId) => {
+    setSelectedId(partId);
+    const part = transformedParts.find(p => p.id === partId);
+    
+    if (part?.isAssembly) {
+      setShowAssembly(true);
+    } else {
+      setShowAssembly(true);
+    }
+  };
 
   return (
     <div className="bg-white rounded-lg w-full h-full flex flex-col p-6 relative">
@@ -71,7 +95,7 @@ const LeftContainer = ({
           <PartList
             parts={transformedParts}
             selectedId={selectedId}
-            onSelect={setSelectedId}
+            onSelect={handlePartSelect}
           />
         </div>
 
@@ -84,16 +108,36 @@ const LeftContainer = ({
             />
           )}
 
-          {currentPart?.model ? (
+          {assemblyPart?.model && showAssembly ? (
+            <>
+              <Canvas shadows camera={{ position: [4, 0, 4], fov: 50 }}>
+                <Suspense fallback={null}>
+                  <Stage environment="city" intensity={0.6} contactShadow={false}>
+                    <AnimationPlayer 
+                      url={assemblyPart.model} 
+                      currentFrame={currentFrame}
+                      totalFrames={totalFrames}
+                      selectedPartMesh={currentPart?.isAssembly ? null : currentPart?.meshName}
+                    />
+                  </Stage>
+                </Suspense>
+                <OrbitControls makeDefault />
+              </Canvas>
+
+              {/* 👇 슬라이더만 남김 */}
+              <AnimationSlider
+                currentFrame={currentFrame}
+                totalFrames={totalFrames}
+                onFrameChange={handleFrameChange}
+                onReset={handleReset}
+                modelUrl={assemblyPart.model}
+              />
+            </>
+          ) : currentPart?.model ? (
             <Canvas shadows camera={{ position: [4, 0, 4], fov: 50 }}>
               <Suspense fallback={null}>
                 <Stage environment="city" intensity={0.6} contactShadow={false}>
-                  {/* 👇 완성본이면 디버거, 아니면 일반 모델 */}
-                  {currentPart.isAssembly ? (
-                    <AnimationDebugger url={currentPart.model} />
-                  ) : (
-                    <SinglePartModel modelPath={currentPart.model} />
-                  )}
+                  <SinglePartModel modelPath={currentPart.model} />
                 </Stage>
               </Suspense>
               <OrbitControls makeDefault autoRotate autoRotateSpeed={0.5} />

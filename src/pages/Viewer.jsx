@@ -28,7 +28,7 @@ const Viewer = () => {
   
   const containerRef = useRef(null);
   const captureRef = useRef(null);
-  
+
   // API 데이터 로딩
   useEffect(() => {
     const loadModelData = async () => {
@@ -65,7 +65,7 @@ const Viewer = () => {
     loadModelData();
   }, [id]);
 
-  // 리사이즈 핸들러
+  // 👇 리사이즈 핸들러 (접기 로직 추가)
   const handleMouseDown = (e) => {
     e.preventDefault();
     setIsDragging(true);
@@ -79,10 +79,19 @@ const Viewer = () => {
       const deltaPercent = (deltaX / containerWidth) * 100;
       let newWidth = startWidth + deltaPercent;
 
-      if (newWidth < 20) newWidth = 20;
+      // 👇 최소값: 15% 미만이면 접기
+      if (newWidth < 15) {
+        setIsCollapsed(true);
+        setRightPanelWidth(33); // 다시 펼칠 때를 위해 기본값 유지
+        return;
+      }
+
+      // 👇 최대값 제한
       if (newWidth > 50) newWidth = 50;
+      if (newWidth < 20) newWidth = 20;
 
       setRightPanelWidth(newWidth);
+      setIsCollapsed(false);
     };
 
     const handleMouseUp = () => {
@@ -159,7 +168,7 @@ const Viewer = () => {
         </div>
         <ReportExporter 
           captureRef={captureRef}
-          currentPart={null} // 👈 임시로 null 전달 (필요시 LeftContainer에서 전달받기)
+          currentPart={null}
           chatHistory={aiChats}
         />
       </header>
@@ -191,7 +200,7 @@ const Viewer = () => {
               opacity: isCollapsed ? 0 : 1,
               display: isCollapsed ? "none" : "block",
             }}
-            className="h-full relative min-w-[300px]"
+            className="h-full relative min-w-[300px] transition-all duration-300"
           >
             {/* 리사이저 */}
             <div
@@ -213,19 +222,21 @@ const Viewer = () => {
 
           {/* 3. Dock */}
           {isCollapsed && (
-            <div className="w-16 h-full flex flex-col items-center animate-fade-in-right shrink-0">
+            <div className="w-16 h-full flex flex-col items-center shrink-0">
               <div className="bg-white rounded-2xl border border-gray-200 p-2 flex flex-col gap-3">
                 <button
                   onClick={() => handleRestore("ai")}
-                  className="w-10 h-10 flex items-center justify-center rounded-xl text-gray-400 hover:bg-bg-1 hover:text-main-1 transition-all group relative"
+                  className="w-10 h-10 flex items-center justify-center rounded-xl text-gray-400 hover:bg-bg-1 hover:text-main-1 transition-all"
+                  title="AI 채팅"
                 >
                   <MessageSquare size={20} />
                 </button>
                 <button
                   onClick={() => handleRestore("note")}
-                  className="w-10 h-10 flex items-center justify-center rounded-xl text-gray-400 hover:bg-bg-1 hover:text-main-1 transition-all group relative"
+                  className="w-10 h-10 flex items-center justify-center rounded-xl text-gray-400 hover:bg-bg-1 hover:text-main-1 transition-all"
+                  title="노트"
                 >
-                  <File alt="note" size={20} />
+                  <File size={20} />
                 </button>
 
                 <div className="w-full h-[1px] bg-gray-100 my-1"></div>
@@ -233,6 +244,7 @@ const Viewer = () => {
                 <button
                   onClick={() => handleRestore()}
                   className="w-10 h-10 flex items-center justify-center rounded-xl text-gray-400 hover:bg-bg-1 hover:text-main-1 transition-all"
+                  title="패널 펼치기"
                 >
                   <ChevronLeft size={20} />
                 </button>
