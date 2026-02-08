@@ -1,11 +1,42 @@
 import React from "react";
 import { Bookmark, Calendar } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 
-const StudyCard = ({ category, title, date, isInProgress = true, imgUrl, objectId }) => {
+const StudyCard = ({
+  category,
+  title,
+  date,
+  isInProgress = true,
+  imgUrl,
+  objectId,
+}) => {
   const [isBookmarked, setIsBookmarked] = useState(false);
   const navigate = useNavigate();
+
+  // 컴포넌트 로드 시 북마크 여부 확인
+  useEffect(() => {
+    const bookmarks = JSON.parse(
+      localStorage.getItem("bookmarked_models") || "[]",
+    );
+    setIsBookmarked(bookmarks.includes(objectId));
+  }, [objectId]);
+
+  // 북마크 토글 함수
+  const toggleBookmark = (e) => {
+    e.stopPropagation(); // 카드 클릭 이벤트와 겹치지 않게 방지
+    const bookmarks = JSON.parse(
+      localStorage.getItem("bookmarked_models") || "[]",
+    );
+    let updated;
+    if (isBookmarked) {
+      updated = bookmarks.filter((id) => id !== objectId);
+    } else {
+      updated = [...bookmarks, objectId];
+    }
+    localStorage.setItem("bookmarked_models", JSON.stringify(updated));
+    setIsBookmarked(!isBookmarked);
+  };
 
   const handleCardClick = () => {
     if (objectId) {
@@ -14,7 +45,7 @@ const StudyCard = ({ category, title, date, isInProgress = true, imgUrl, objectI
   };
 
   return (
-    <div 
+    <div
       onClick={handleCardClick}
       className="bg-white flex flex-col w-[248px] h-[256px] p-[16px] rounded-[8px] cursor-pointer hover:shadow-lg transition-shadow"
     >
@@ -23,10 +54,7 @@ const StudyCard = ({ category, title, date, isInProgress = true, imgUrl, objectI
         <div className="flex justify-between items-start mb-[16px]">
           <span className="b-14-semi text-gray-7">{category}</span>
           <button
-            onClick={(e) => {
-              e.stopPropagation(); // 카드 클릭 이벤트 전파 방지
-              setIsBookmarked(!isBookmarked);
-            }}
+            onClick={toggleBookmark} // ✨ 여기를 toggleBookmark로 변경!
             className="transition-transform active:scale-90"
           >
             <Bookmark
