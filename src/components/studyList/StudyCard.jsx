@@ -1,20 +1,21 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Bookmark, Calendar } from "lucide-react";
-import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { getAssemblyModelSignedUrl } from "../../api/modelAPI";
 
 const StudyCard = ({
   category,
   title,
   date,
-  isInProgress = true,
-  imgUrl,
+  isInProgress = false,
+  thumbnailUrl,
   objectId,
 }) => {
   const [isBookmarked, setIsBookmarked] = useState(false);
+  const [imageUrl, setImageUrl] = useState(null);
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
-  // 컴포넌트 로드 시 북마크 여부 확인
   useEffect(() => {
     const bookmarks = JSON.parse(
       localStorage.getItem("bookmarked_models") || "[]",
@@ -22,9 +23,34 @@ const StudyCard = ({
     setIsBookmarked(bookmarks.includes(objectId));
   }, [objectId]);
 
-  // 북마크 토글 함수
+  useEffect(() => {
+    const loadThumbnail = async () => {
+      if (!thumbnailUrl) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        if (thumbnailUrl.startsWith('http://') || thumbnailUrl.startsWith('https://')) {
+          setImageUrl(thumbnailUrl);
+        } else {
+          const signedUrl = await getAssemblyModelSignedUrl(thumbnailUrl);
+          if (signedUrl && signedUrl.startsWith('http')) {
+            setImageUrl(signedUrl);
+          }
+        }
+      } catch (error) {
+        console.error(`❌ [${title}] 썸네일 로드 실패:`, error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadThumbnail();
+  }, [thumbnailUrl, title]);
+
   const toggleBookmark = (e) => {
-    e.stopPropagation(); // 카드 클릭 이벤트와 겹치지 않게 방지
+    e.stopPropagation();
     const bookmarks = JSON.parse(
       localStorage.getItem("bookmarked_models") || "[]",
     );
@@ -47,14 +73,27 @@ const StudyCard = ({
   return (
     <div
       onClick={handleCardClick}
-      className="bg-white flex flex-col w-[248px] h-[256px] p-[16px] rounded-[8px] cursor-pointer hover:shadow-lg transition-shadow"
+      className="bg-white flex flex-col w-[248px] h-[256px] p-[16px] rounded-[8px] cursor-pointer hover:shadow-lg transition-shadow relative"
     >
-      {/* 상단 화이트 카드 영역 */}
-      <div className="h-[151px] relative overflow-hidden">
+      {/* 썸네일 이미지 - 중앙 정렬 */}
+      {imageUrl && (
+        <div className="absolute inset-0 flex items-center justify-center z-0 opacity-30 pointer-events-none">
+          <img 
+            src={imageUrl} 
+            alt={title} 
+            className="max-w-[200px] max-h-[180px] object-contain"
+            onError={(e) => {
+              e.target.style.display = 'none';
+            }}
+          />
+        </div>
+      )}
+
+      <div className="h-[151px] relative z-10">
         <div className="flex justify-between items-start mb-[16px]">
           <span className="b-14-semi text-gray-7">{category}</span>
           <button
-            onClick={toggleBookmark} // ✨ 여기를 toggleBookmark로 변경!
+            onClick={toggleBookmark}
             className="transition-transform active:scale-90"
           >
             <Bookmark
@@ -66,16 +105,11 @@ const StudyCard = ({
             />
           </button>
         </div>
-        {/* 드론 이미지 */}
-        <div className="absolute bottom-[-10px] right-[-10px] w-[220px]">
-          <img src={imgUrl} alt={title} className="w-full object-contain" />
-        </div>
 
-        <h2 className="t-24-bold">{title}</h2>
+        <h2 className="t-24-bold relative z-10">{title}</h2>
       </div>
 
-      {/* 하단 정보 및 버튼 영역 */}
-      <div className="mt-[8px] flex-grow flex flex-col gap-[16px]">
+      <div className="mt-[8px] flex-grow flex flex-col gap-[16px] relative z-10">
         <div className="flex flex-row items-center justify-start gap-[6px] text-gray-6">
           <Calendar color="#888E96" size={12} />
           <span className="text-[12px] font-medium">{date}</span>

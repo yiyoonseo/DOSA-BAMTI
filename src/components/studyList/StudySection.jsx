@@ -82,7 +82,7 @@ const StudySection = ({ category, models, filterType }) => {
               date={model.updatedAt || "2026. 02. 07"}
               // 계산된 상태에 따라 버튼과 UI가 변함
               isInProgress={model.computedStatus === "IN_PROGRESS"}
-              imgUrl={model.thumbnailUrl}
+              thumbnailUrl={model.thumbnailUrl}
             />
           ))
         ) : (
