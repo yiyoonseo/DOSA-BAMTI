@@ -10,6 +10,8 @@ import AnimationSlider from "./AnimationSlider";
 import AiBriefingIcon from "../../assets/icons/icon-ai-breifing.svg";
 import AiNotBriefingIcon from "../../assets/icons/icon-ai-notbreifing.svg";
 import { mapModelData } from "../../utils/modelMapper";
+import { fetchAiBriefing } from "../../api/aiAPI";
+import { getChatsByModel } from "../../api/aiDB";
 
 function SinglePartModel({ modelPath }) {
   if (!modelPath) return null;
@@ -18,7 +20,6 @@ function SinglePartModel({ modelPath }) {
     const { scene } = useGLTF(modelPath);
     return <primitive object={scene.clone()} />;
   } catch (error) {
-    console.error("❌ GLTFLoader error:", error);
     return null;
   }
 }
@@ -30,17 +31,16 @@ const LeftContainer = ({
   onMaximize,
   floatingMessages,
   setFloatingMessages,
+  modelId,
 }) => {
   const [transformedParts, setTransformedParts] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
-  const [showBriefing, setShowBriefing] = useState(true);
+  const [showBriefing, setShowBriefing] = useState(false);
   const [showAssembly, setShowAssembly] = useState(true);
 
-  // 👇 애니메이션 상태 - isPlaying 제거
   const [currentFrame, setCurrentFrame] = useState(0);
   const [totalFrames] = useState(100);
 
-  // async 데이터 변환
   useEffect(() => {
     const loadParts = async () => {
       const mapped = await mapModelData(apiData);
@@ -56,15 +56,68 @@ const LeftContainer = ({
     }
   }, [apiData]);
 
+  const [briefingData, setBriefingData] = useState(null);
+
+  useEffect(() => {
+    const loadBriefing = async () => {
+      // 1. modelId가 없으면 중단
+      if (!modelId) return; //
+
+      try {
+        // 2. 현재 모델에 해당하는 모든 채팅 가져오기
+        const modelChats = await getChatsByModel(String(modelId)); //
+        if (!modelChats || modelChats.length === 0) return; //
+
+        // 3. 한국 시간 기준 오늘 날짜 구하기 (YYYY-MM-DD)
+        const offset = new Date().getTimezoneOffset() * 60000; //
+        const today = new Date(Date.now() - offset).toISOString().split("T")[0]; //
+
+        // 4. 오늘 나눈 대화만 필터링
+        const todaysChats = modelChats.filter((chat) => {
+          if (!chat.lastUpdated) return false; //
+          const chatDate = new Date(chat.lastUpdated - offset)
+            .toISOString()
+            .split("T")[0]; //
+          return chatDate === today; //
+        });
+
+        // 5. 메시지 합치기 (최근 3개 세션)
+        const combinedMessages = todaysChats.slice(-3).reduce((acc, chat) => {
+          return [...acc, ...(chat.messages || [])]; //
+        }, []);
+
+        console.log(
+          `📊 모델(${modelId}) 오늘 메시지 수:`,
+          combinedMessages.length,
+        ); //
+
+        // 6. 8번 이상 대화 시 브리핑 생성
+        if (combinedMessages.length >= 8 && !briefingData) {
+          //
+          const result = await fetchAiBriefing(combinedMessages); //
+          if (result && result.data) {
+            setBriefingData(result.data); // 👈 .data 를 붙여서 실제 본문만 전달
+          } else {
+            setBriefingData(result); // 혹시 이미 본문만 오고 있다면 그대로 유지
+          }
+          setShowBriefing(true); //
+          console.log("✅ 모델 맞춤형 브리핑 생성 성공!"); //
+        }
+      } catch (error) {
+        console.error("❌ 브리핑 로드 실패:", error); //
+      }
+    };
+
+    loadBriefing();
+  }, [modelId]);
+
   const currentPart = transformedParts.find((p) => p.id === selectedId);
   const assemblyPart = transformedParts.find((p) => p.isAssembly);
 
-  // 👇 리셋만 남김
   const handleReset = () => {
     setCurrentFrame(0);
   };
 
-  // 👇 슬라이더 변경
   const handleFrameChange = (frame) => {
     setCurrentFrame(frame);
   };
@@ -88,6 +141,7 @@ const LeftContainer = ({
           onMaximize={onMaximize}
           messages={floatingMessages}
           setMessages={setFloatingMessages}
+          modelId={modelId}
         />
       )}
 
