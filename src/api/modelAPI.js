@@ -91,7 +91,6 @@ export const getAssemblyModelSignedUrl = async (assemblyModelUrl) => {
     return null;
   }
 };
-
 // src/api/modelAPI.js 에 추가
 export const getModelById = async (id) => {
   try {
