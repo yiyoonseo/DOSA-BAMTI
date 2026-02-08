@@ -11,9 +11,7 @@ import {
   TrendingUp,
 } from "lucide-react";
 
-const SideBar = () => {
-  const [activeMenu, setActiveMenu] = useState("홈");
-
+const SideBar = ({ activeMenu, setActiveMenu }) => {
   const navGroups = [
     {
       title: "학습",
