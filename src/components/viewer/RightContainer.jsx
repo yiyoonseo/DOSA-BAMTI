@@ -12,6 +12,7 @@ import {
   updateNote,
   deleteNote,
 } from "../../utils/noteDB";
+import { getLastChatId } from "../../api/aiDB";
 
 const parseDate = (dateStr) => {
   const [dayPart, monthStr, timePart] = dateStr.split(" ");
@@ -197,8 +198,24 @@ const RightContainer = ({
   };
 
   const handleAiChatSelect = () => setIsMenuOpen(false);
-  const handleNewAiChat = () => setIsMenuOpen(false);
 
+  const handleNewAiChat = async () => {
+    try {
+      // 1. 마지막으로 생성된 ID를 가져와서 +1 해줍니다.
+      const lastId = await getLastChatId();
+      const newId = (Number(lastId) || 0) + 1;
+
+      // 2. 새로운 ID를 설정하면 AssistantAi가 이를 감지하여 새 방을 생성합니다.
+      setCurrentChatId(newId);
+
+      // 3. 메뉴를 닫습니다.
+      setIsMenuOpen(false);
+
+      console.log("🚀 새 채팅 세션 생성 완료: ID", newId);
+    } catch (error) {
+      console.error("새 채팅 생성 중 오류 발생:", error);
+    }
+  };
   useEffect(() => {
     if (activeTab === "note" && isAdding && scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;

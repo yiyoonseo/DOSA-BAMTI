@@ -86,3 +86,18 @@ export const getLastChatId = async () => {
   const allChats = await db.getAll(STORE_NAME);
   return allChats.length === 0 ? 0 : Math.max(...allChats.map((c) => c.chatId));
 };
+
+export const deleteChat = async (chatId) => {
+  const db = await initDB();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction("chats", "readwrite");
+    const store = transaction.objectStore("chats");
+    const request = store.delete(Number(chatId)); // 키값(chatId)으로 삭제
+
+    request.onsuccess = () => {
+      console.log(`✅ DB 삭제 성공: Chat ${chatId}`);
+      resolve(true);
+    };
+    request.onerror = () => reject(request.error);
+  });
+};
