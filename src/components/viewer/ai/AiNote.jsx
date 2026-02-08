@@ -75,6 +75,20 @@ const AiNote = ({ onClose, onMaximize, modelId }) => {
     setIsDragging(true);
     const rect = noteRef.current.getBoundingClientRect();
     dragOffset.current = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    if (e.target.closest('input') || e.target.closest('button')) return;
+    e.preventDefault();
+    setIsDragging(true);
+
+    if (isExpanded) {
+        setIsExpanded(false);
+        const currentX = e.clientX;
+        const currentY = e.clientY;
+        dragOffset.current = { x: 180, y: 24 }; 
+        setPosition({ x: currentX - 180, y: currentY - 24 });
+    } else {
+        const rect = noteRef.current.getBoundingClientRect();
+        dragOffset.current = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    }
   };
 
   useEffect(() => {
