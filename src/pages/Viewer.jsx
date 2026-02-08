@@ -188,6 +188,7 @@ const Viewer = () => {
               onMaximize={handleMaximizeAiNote}
               floatingMessages={floatingMessages}
               setFloatingMessages={setFloatingMessages}
+              modelId={id}
             />
           </div>
 
