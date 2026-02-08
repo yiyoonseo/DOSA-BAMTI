@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import Edit from "../../../assets/icons/icon-edit.svg";
 import { getChatsByModel } from "../../../api/aiDB";
 import { ChevronDown, ChevronUp } from "lucide-react";
+import { deleteChat } from "../../../api/aiDB";
 
 const AiMenu = ({
   modelId,
@@ -12,6 +13,54 @@ const AiMenu = ({
 }) => {
   const [chatSessions, setChatSessions] = useState([]);
   const [openGroups, setOpenGroups] = useState({});
+  const [contextMenu, setContextMenu] = useState({
+    show: false,
+    x: 0,
+    y: 0,
+    chatId: null,
+  });
+
+  // 우클릭 핸들러
+  const handleContextMenu = (e, chatId) => {
+    e.preventDefault(); // 브라우저 기본 메뉴 방지
+    setContextMenu({
+      show: true,
+      x: e.pageX,
+      y: e.pageY,
+      chatId: chatId,
+    });
+  };
+
+  const handleDeleteChat = async () => {
+    const targetId = contextMenu.chatId;
+    if (!targetId) return;
+    alert("대화를 정말 삭제하시겠습니까?");
+
+    try {
+      // 1. DB 삭제 시도
+      const isDeleted = await deleteChat(targetId);
+
+      if (isDeleted) {
+        // 2. ✅ UI 상태 업데이트 (이 코드가 있어야 화면에서 즉시 사라집니다)
+        // Number()를 사용하여 ID 타입을 맞춰주는 것이 중요합니다.
+        setChatSessions((prevSessions) =>
+          prevSessions.filter((chat) => Number(chat.id) !== Number(targetId)),
+        );
+
+        // 3. 만약 삭제한 채팅이 현재 선택된 채팅방이라면 선택 해제
+        if (Number(targetId) === Number(currentChatId)) {
+          onSelectChat(null);
+        }
+
+        console.log(`✅ UI에서 ${targetId}번 대화 삭제 완료`);
+      }
+    } catch (error) {
+      console.error("삭제 과정 중 UI 업데이트 실패:", error);
+    } finally {
+      // 우클릭 메뉴 닫기
+      setContextMenu({ ...contextMenu, show: false });
+    }
+  };
 
   const getGroupName = (chatDate) => {
     const today = new Date();
@@ -162,6 +211,7 @@ const AiMenu = ({
                         return (
                           <button
                             key={chat.id}
+                            onContextMenu={(e) => handleContextMenu(e, chat.id)} // 💡 우클릭 이벤트 연결
                             onClick={() => {
                               onSelectChat(chat.id);
                               onClose();
@@ -170,13 +220,30 @@ const AiMenu = ({
                             className={`w-full text-left p-3 b-16-med-120 truncate transition-all rounded-[8px] ${
                               isSelected
                                 ? "bg-bg-1 text-main-1 font-bold" // 현재 대화방 스타일
-                                : "bg-gray-50 text-gray-9 hover:bg-bg-1" // 일반 스타일
+                                : " text-gray-9 hover:bg-bg-1" // 일반 스타일
                             }`}
                           >
                             {chat.title}
                           </button>
                         );
                       })}
+                    </div>
+                  )}
+
+                  {contextMenu.show && (
+                    <div
+                      className="fixed bg-white border shadow-lg rounded-md py-1 z-[10000]"
+                      style={{ top: contextMenu.y, left: contextMenu.x }}
+                    >
+                      <button
+                        onClick={() => {
+                          handleDeleteChat(contextMenu.chatId);
+                          setContextMenu({ ...contextMenu, show: false });
+                        }}
+                        className="text-red-500 hover:bg-red-50 ..."
+                      >
+                        대화 삭제하기
+                      </button>
                     </div>
                   )}
                 </div>
