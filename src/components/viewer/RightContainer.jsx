@@ -8,6 +8,8 @@ import NoteItemList from "./note/NoteItemList";
 import NoteFull from "./note/NoteFull";
 import AssistantAi from "./ai/AssistantAi";
 import AiMenu from "./ai/AiMenu";
+import { formatSystemName } from "../../utils/formatModelName";
+import { getModelById } from "../../api/modelAPI";
 
 const parseDate = (dateStr) => {
   const [dayPart, monthStr, timePart] = dateStr.split(" ");
@@ -57,11 +59,27 @@ const RightContainer = ({
   isAiNoteOpen,
   aiChats,
   setAiChats,
+  modelId,
 }) => {
   const [notes, setNotes] = useState([]);
   const [isAdding, setIsAdding] = useState(false);
   const [editingNote, setEditingNote] = useState(null);
   const [expandedNoteId, setExpandedNoteId] = useState(null);
+
+  const [modelName, setModelName] = useState("");
+
+  useEffect(() => {
+    const fetchAndFormatName = async () => {
+      const currentModel = await getModelById(modelId); // 내 아이디 찾기
+
+      if (currentModel) {
+        // "Machine Vice" -> "MACHINE_VICE" 변환
+        const formattedName = formatSystemName(currentModel.name);
+        setModelName(formattedName);
+      }
+    };
+    fetchAndFormatName();
+  }, [modelId]);
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [deletingNoteId, setDeletingNoteId] = useState(null);
@@ -295,7 +313,7 @@ const RightContainer = ({
         {/* [TAB 2] AI 화면 */}
         {/* AssistantAi에 sessions 데이터를 넘겨주어야 실제 대화가 보입니다. 
            (여기서는 AssistantAi 구현부를 모르므로, 필요 시 props를 추가하세요: sessions={aiChats}) */}
-        {activeTab === "ai" && <AssistantAi />}
+        {activeTab === "ai" && <AssistantAi modelName={modelName} />}
       </div>
     </div>
   );

@@ -9,42 +9,84 @@ import {
   X,
 } from "lucide-react";
 import IconPaperClip from "../../../assets/icons/icon-paperclip.svg";
+import { fetchAiResponse } from "../../../api/aiAPI";
 
-const AssistantAi = () => {
+const AssistantAi = ({ modelName }) => {
   // --- 기능 및 상태 관리 (아래쪽 코드 기반) ---
   const [messages, setMessages] = useState([
-    { id: 1, role: "user", content: "물어본 내용..." },
-    { id: 2, role: "assistant", content: "대답 어쩌고..." },
+    { id: 1, role: "assistant", content: "안녕하세요! 무엇이든 물어보세요." },
   ]);
   const [inputValue, setInputValue] = useState("");
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
+  const [isLoading, setIsLoading] = useState(false); // 로딩 상태 추가
 
   const scrollRef = useRef(null);
   const imageInputRef = useRef(null);
   const fileInputRef = useRef(null);
 
-  // 스크롤 자동 이동
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [messages]);
+  }, [messages, isLoading]); // 로딩 중에도 스크롤 최신화
 
-  const handleSendMessage = () => {
-    if (!inputValue.trim()) return;
+  const handleSendMessage = async () => {
+    if (!inputValue.trim() || isLoading) return;
 
+    const userContent = inputValue;
+
+    // 1. 유저 메시지 즉시 추가
     const newUserMsg = {
       id: Date.now(),
       role: "user",
-      content: inputValue,
+      content: userContent,
       attachment: selectedItem,
     };
     setMessages((prev) => [...prev, newUserMsg]);
     setInputValue("");
     setSelectedItem(null);
     setIsMenuOpen(false);
+
+    // 2. 로딩 시작
+    setIsLoading(true);
+
+    // 3. API 호출
+    const aiReplyContent = await fetchAiResponse(modelName, userContent);
+
+    // 4. AI 메시지 추가
+    const newAiMsg = {
+      id: Date.now() + 1,
+      role: "assistant",
+      content: aiReplyContent,
+    };
+    setMessages((prev) => [...prev, newAiMsg]);
+
+    // 5. 로딩 종료
+    setIsLoading(false);
   };
+
+  // 스크롤 자동 이동
+  // useEffect(() => {
+  //   if (scrollRef.current) {
+  //     scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+  //   }
+  // }, [messages]);
+
+  // const handleSendMessage = () => {
+  //   if (!inputValue.trim()) return;
+
+  //   const newUserMsg = {
+  //     id: Date.now(),
+  //     role: "user",
+  //     content: inputValue,
+  //     attachment: selectedItem,
+  //   };
+  //   setMessages((prev) => [...prev, newUserMsg]);
+  //   setInputValue("");
+  //   setSelectedItem(null);
+  //   setIsMenuOpen(false);
+  // };
 
   const handleFileChange = (e, type) => {
     const file = e.target.files[0];
@@ -93,13 +135,20 @@ const AssistantAi = () => {
                     />
                   ) : (
                     "📁"
-                  )}{" "}
+                  )}
                   {msg.attachment.name}
                 </div>
               )}
             </div>
           </div>
         ))}
+        {isLoading && (
+          <div className="flex justify-start">
+            <div className="max-w-[85%] b-14-med px-4 py-2 mx-[20px] my-[12px] bg-white border border-bg-1 border-[1.5px] text-gray-4 rounded-[8px] animate-pulse">
+              AI가 답변을 생각하고 있습니다...
+            </div>
+          </div>
+        )}
       </div>
 
       {/* 3. 입력창 영역 (위쪽 UI 스타일: 하단 마진, 회색 알약 모양 입력바) */}
@@ -179,15 +228,18 @@ const AssistantAi = () => {
             type="text"
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
-            placeholder="메시지를 입력하세요..."
+            placeholder={
+              isLoading ? "AI 답변 대기 중..." : "메시지를 입력하세요..."
+            }
+            disabled={isLoading}
             className="flex-1 bg-transparent outline-none b-14-med py-2 text-gray-700"
             onKeyPress={(e) => e.key === "Enter" && handleSendMessage()}
           />
 
           <button
             onClick={handleSendMessage}
-            disabled={!inputValue.trim()}
-            className={`p-2 rounded-full text-white transition-colors bg-main-1 hover:bg-white hover:text-main-1`}
+            disabled={!inputValue.trim() || isLoading}
+            className="p-2 rounded-full text-white bg-main-1 hover:bg-main-2 disabled:bg-gray-300"
           >
             <ArrowUp size={20} strokeWidth={2.5} />
           </button>
