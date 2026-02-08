@@ -170,7 +170,7 @@ const AiMenu = ({
                             className={`w-full text-left p-3 b-16-med-120 truncate transition-all rounded-[8px] ${
                               isSelected
                                 ? "bg-bg-1 text-main-1 font-bold" // 현재 대화방 스타일
-                                : "bg-gray-50 text-gray-9 hover:bg-bg-1" // 일반 스타일
+                                : " text-gray-9 hover:bg-bg-1" // 일반 스타일
                             }`}
                           >
                             {chat.title}

@@ -62,6 +62,7 @@ const RightContainer = ({
   aiChats,
   setAiChats,
   modelId,
+  modelName,
 }) => {
   const [notes, setNotes] = useState([]);
   const [isAdding, setIsAdding] = useState(false);
@@ -74,11 +75,22 @@ const RightContainer = ({
   const containerRef = useRef(null);
   const [width, setWidth] = useState(0);
 
+  const [currentChatId, setCurrentChatId] = useState(null);
+
   useEffect(() => {
     if (modelId) {
       loadNotes();
     }
   }, [modelId]);
+
+  useEffect(() => {
+    if (activeTab === "ai" && !currentChatId && aiChats?.length > 0) {
+      const lastSession = [...aiChats].sort(
+        (a, b) => b.lastUpdated - a.lastUpdated,
+      )[0];
+      setCurrentChatId(lastSession.chatId);
+    }
+  }, [activeTab, aiChats, currentChatId]);
 
   const loadNotes = async () => {
     const loadedNotes = await getNotesByModelId(modelId);
@@ -284,6 +296,7 @@ const RightContainer = ({
               onClose={() => setIsMenuOpen(false)}
               onSelectChat={handleAiChatSelect}
               onNewChat={handleNewAiChat}
+              modelId={modelId}
             />
           ))}
 
@@ -312,7 +325,14 @@ const RightContainer = ({
             />
           ))}
 
-        {activeTab === "ai" && <AssistantAi />}
+        {activeTab === "ai" && (
+          <AssistantAi
+            modelId={modelId}
+            modelName={modelName}
+            currentChatId={currentChatId}
+            setCurrentChatId={setCurrentChatId}
+          />
+        )}
       </div>
     </div>
   );
