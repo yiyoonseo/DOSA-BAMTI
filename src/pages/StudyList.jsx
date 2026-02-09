@@ -34,7 +34,11 @@ const StudyList = () => {
 
   return (
     <div className="flex flex-row">
-      <SideBar activeMenu={activeMenu} setActiveMenu={setActiveMenu} />
+      <SideBar 
+        activeMenu={activeMenu} 
+        setActiveMenu={setActiveMenu} 
+        allModels={allModels}
+      />
       <div className="ml-[275px] px-[60px] py-[46px] w-full bg-gray-50">
         <div className="mt-[46px] t-24-semi">학습 페이지</div>
 

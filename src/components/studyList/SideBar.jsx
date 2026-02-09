@@ -11,13 +11,20 @@ import {
   TrendingUp,
 } from "lucide-react";
 import QuizModal from "./QuizModal";
+import NotesModal from "./NotesModal";
 
-const SideBar = ({ activeMenu, setActiveMenu }) => {
+const SideBar = ({ activeMenu, setActiveMenu, allModels = [] }) => {
   const [quizModalOpen, setQuizModalOpen] = useState(false);
+  const [notesModalOpen, setNotesModalOpen] = useState(false);
 
   const handleQuizClick = () => {
     setActiveMenu("퀴즈");
     setQuizModalOpen(true);
+  };
+
+  const handleNotesClick = () => {
+    setActiveMenu("메모 리스트");
+    setNotesModalOpen(true);
   };
 
   const navGroups = [
@@ -31,7 +38,7 @@ const SideBar = ({ activeMenu, setActiveMenu }) => {
     {
       title: "기록",
       items: [
-        { name: "메모 리스트", icon: FileText },
+        { name: "메모 리스트", icon: FileText, onClick: handleNotesClick },
         { name: "AI 대화 내역", icon: Sparkles },
         { name: "퀴즈 기록", icon: FolderMinus },
         { name: "PDF 출력", icon: Share },
@@ -130,6 +137,15 @@ const SideBar = ({ activeMenu, setActiveMenu }) => {
           setQuizModalOpen(false);
           setActiveMenu("홈");
         }}
+      />
+
+      <NotesModal
+        isOpen={notesModalOpen}
+        onClose={() => {
+          setNotesModalOpen(false);
+          setActiveMenu("홈");
+        }}
+        allModels={allModels}
       />
     </>
   );
