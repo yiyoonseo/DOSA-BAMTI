@@ -14,14 +14,17 @@ import QuizModal from "./QuizModal";
 import NotesModal from "./NotesModal";
 import PdfModal from "./PdfModal";
 import QuizRecordModal from "./QuizRecordModal";
+import ChatHistoryModal from "./ChatHistoryModal";
 
 const SideBar = ({ activeMenu, setActiveMenu, allModels = [] }) => {
   const [quizModalOpen, setQuizModalOpen] = useState(false);
   const [notesModalOpen, setNotesModalOpen] = useState(false);
   const [pdfModalOpen, setPdfModalOpen] = useState(false);
   const [quizRecordModalOpen, setQuizRecordModalOpen] = useState(false);
+  const [chatModalOpen, setChatModalOpen] = useState(false); // AI 대화 내역 상태 추가
   const [showDevModal, setShowDevModal] = useState(false);
 
+  // 핸들러 함수들
   const handleQuizClick = () => {
     setActiveMenu("퀴즈");
     setQuizModalOpen(true);
@@ -42,6 +45,11 @@ const SideBar = ({ activeMenu, setActiveMenu, allModels = [] }) => {
     setQuizRecordModalOpen(true);
   };
 
+  const handleChatHistoryClick = () => {
+    setActiveMenu("AI 대화 내역");
+    setChatModalOpen(true);
+  };
+
   const handleWorkflowClick = () => {
     setActiveMenu("워크 플로우");
     setShowDevModal(true);
@@ -59,8 +67,16 @@ const SideBar = ({ activeMenu, setActiveMenu, allModels = [] }) => {
       title: "기록",
       items: [
         { name: "메모 리스트", icon: FileText, onClick: handleNotesClick },
-        { name: "AI 대화 내역", icon: Sparkles },
-        { name: "퀴즈 기록", icon: FolderMinus, onClick: handleQuizRecordClick },
+        {
+          name: "AI 대화 내역",
+          icon: Sparkles,
+          onClick: handleChatHistoryClick,
+        },
+        {
+          name: "퀴즈 기록",
+          icon: FolderMinus,
+          onClick: handleQuizRecordClick,
+        },
         { name: "PDF 출력", icon: Share, onClick: handlePdfClick },
       ],
     },
@@ -150,6 +166,7 @@ const SideBar = ({ activeMenu, setActiveMenu, allModels = [] }) => {
         </nav>
       </div>
 
+      {/* 모달 컴포넌트들 */}
       <QuizModal
         isOpen={quizModalOpen}
         onClose={() => {
@@ -185,6 +202,15 @@ const SideBar = ({ activeMenu, setActiveMenu, allModels = [] }) => {
         allModels={allModels}
       />
 
+      <ChatHistoryModal
+        isOpen={chatModalOpen}
+        onClose={() => {
+          setChatModalOpen(false);
+          setActiveMenu("홈");
+        }}
+        allModels={allModels}
+      />
+
       {/* 개발중 모달 */}
       {showDevModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
@@ -193,8 +219,8 @@ const SideBar = ({ activeMenu, setActiveMenu, allModels = [] }) => {
               <div className="text-6xl mb-4">🚧</div>
               <h2 className="t-24-bold mb-3">개발 중입니다</h2>
               <p className="text-gray-600 t-16-regular mb-6">
-                워크플로우 기능은 현재 개발 중입니다.<br />
-                곧 만나보실 수 있습니다!
+                워크플로우 기능은 현재 개발 중입니다.
+                <br />곧 만나보실 수 있습니다!
               </p>
               <button
                 onClick={() => {
