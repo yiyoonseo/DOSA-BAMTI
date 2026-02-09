@@ -1,4 +1,4 @@
-import React, { useState, useEffect, Suspense } from "react";
+import React, { useState, useEffect, Suspense, useRef } from "react";
 import { Canvas } from "@react-three/fiber";
 import {
   OrbitControls,
@@ -10,6 +10,7 @@ import {
   TransformControls,
 } from "@react-three/drei";
 import * as THREE from "three";
+import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
 
 import AiNote from "./ai/AiNote";
 import PartDetail from "../part/PartDetail";
@@ -17,6 +18,7 @@ import PartList from "../part/PartList";
 import AiBriefing from "./ai/AiBriefing";
 import AnimationPlayer from "./AnimationPlayer";
 import AnimationSlider from "./AnimationSlider";
+import CoordinateDisplay from "./CoordinateDisplay";
 
 import AiBriefingIcon from "../../assets/icons/icon-ai-breifing.svg";
 import AiNotBriefingIcon from "../../assets/icons/icon-ai-notbreifing.svg";
@@ -24,9 +26,54 @@ import AiNotBriefingIcon from "../../assets/icons/icon-ai-notbreifing.svg";
 import { mapModelData } from "../../utils/modelMapper";
 import { fetchAiBriefing } from "../../api/aiAPI";
 import { getChatsByModel } from "../../api/aiDB";
-
 import LightOnIcon from "../../assets/icons/icon-light-on.svg";
 import LightOffIcon from "../../assets/icons/icon-light-off.svg";
+
+// ✅ 수정된 중심 좌표 계산 함수
+async function calculateModelCenter(modelPath) {
+  if (!modelPath) {
+    console.warn("⚠️ modelPath가 없습니다");
+    return { x: 0, y: 0, z: 0 };
+  }
+
+  console.log("🔍 모델 중심 계산 시작:", modelPath);
+
+  try {
+    const loader = new GLTFLoader();
+
+    return new Promise((resolve, reject) => {
+      loader.load(
+        modelPath,
+        (gltf) => {
+          console.log("✅ 모델 로드 성공:", modelPath);
+
+          const box = new THREE.Box3().setFromObject(gltf.scene);
+          const center = new THREE.Vector3();
+          box.getCenter(center);
+
+          const position = {
+            x: center.x,
+            y: center.y,
+            z: center.z,
+          };
+
+          console.log("📍 계산된 중심 좌표:", position);
+          resolve(position);
+        },
+        (progress) => {
+          // 로딩 진행률 (선택사항)
+        },
+        (error) => {
+          console.error("❌ 모델 로드 실패:", modelPath, error);
+          resolve({ x: 0, y: 0, z: 0 });
+        },
+      );
+    });
+  } catch (error) {
+    console.error("❌ calculateModelCenter 에러:", error);
+    return { x: 0, y: 0, z: 0 };
+  }
+}
 
 function SinglePartModel({
   modelPath,
@@ -85,21 +132,13 @@ const LeftContainer = ({
   const [totalFrames] = useState(100);
 
   const [activeMaterial, setActiveMaterial] = useState(null);
+  const [currentPosition, setCurrentPosition] = useState({ x: 0, y: 0, z: 0 });
 
-  useEffect(() => {
-    const loadParts = async () => {
-      const mapped = await mapModelData(apiData);
-      setTransformedParts(mapped);
+  // ✅ 4단계: 기본 중심 좌표를 저장할 state 추가
+  const [basePosition, setBasePosition] = useState({ x: 0, y: 0, z: 0 });
 
-      if (mapped.length > 0 && !selectedId) {
-        setSelectedId(mapped[0].id);
-      }
-    };
-
-    if (apiData) {
-      loadParts();
-    }
-  }, [apiData]);
+  // ✅ 4단계: 슬라이딩 된 좌표를 저장할 state 추가
+  const [animatedPositions, setAnimatedPositions] = useState({});
 
   const [briefingData, setBriefingData] = useState(null);
   useEffect(() => {
@@ -158,13 +197,104 @@ const LeftContainer = ({
   const handleReset = () => setCurrentFrame(0);
   const handleFrameChange = (frame) => setCurrentFrame(frame);
 
-  const handlePartSelect = (partId) => {
+  // ✅ 3단계: 부품 선택 시 좌표 업데이트
+  const handlePartSelect = async (partId) => {
+    console.log("🎯 부품 선택:", partId);
     setSelectedId(partId);
+
+    const selectedPart = transformedParts.find((p) => p.id === partId);
+
+    if (selectedPart && selectedPart.model) {
+      console.log("📍 선택된 부품의 중심 좌표 계산 시작:", selectedPart.name);
+
+      // ✅ 4단계: 슬라이딩 된 좌표가 있으면 그것을 사용, 없으면 계산
+      if (currentFrame > 0 && animatedPositions[selectedPart.meshName]) {
+        // 슬라이딩 된 좌표 사용
+        const animatedPos = animatedPositions[selectedPart.meshName];
+        console.log("🎬 슬라이딩 된 좌표 사용:", animatedPos);
+        setCurrentPosition(animatedPos);
+      } else {
+        // 기본 중심 좌표 계산
+        const center = await calculateModelCenter(selectedPart.model);
+        console.log("✅ 선택된 부품 중심 좌표:", center);
+        setCurrentPosition(center);
+      }
+    } else {
+      console.warn("⚠️ 선택된 부품에 model 경로가 없습니다");
+    }
   };
 
   const handleMaterialSelect = (materialProps) => {
     setActiveMaterial(materialProps);
   };
+
+  // ✅ 4단계: currentFrame이 변경될 때 현재 선택된 부품의 슬라이딩 좌표 업데이트
+  useEffect(() => {
+    if (currentPart && !currentPart.isAssembly && currentFrame > 0) {
+      // AnimationPlayer로부터 현재 부품의 위치를 가져와야 함
+      // 이 부분은 AnimationPlayer가 위치 정보를 제공하는 방식에 따라 달라짐
+      console.log(
+        "🎬 프레임 변경됨:",
+        currentFrame,
+        "부품:",
+        currentPart.meshName,
+      );
+    } else if (currentFrame === 0 && currentPart) {
+      // 슬라이더가 0으로 리셋되면 기본 좌표로 복원
+      setCurrentPosition(basePosition);
+      console.log("🔄 기본 좌표로 복원:", basePosition);
+    }
+  }, [currentFrame, currentPart]);
+
+  // ✅ 부품 데이터 로드 및 기본 좌표 설정
+  useEffect(() => {
+    const loadParts = async () => {
+      console.log("🚀 loadParts 시작, apiData:", apiData);
+
+      const mapped = await mapModelData(apiData);
+      console.log("📦 매핑된 부품들:", mapped);
+
+      setTransformedParts(mapped);
+
+      const assemblyPart = mapped.find((p) => p.isAssembly);
+
+      if (assemblyPart && !selectedId) {
+        console.log("🎯 조립품 발견:", assemblyPart);
+        setSelectedId(assemblyPart.id);
+
+        if (assemblyPart.model) {
+          console.log("📍 조립품 중심 좌표 계산 시작...");
+          const center = await calculateModelCenter(assemblyPart.model);
+          console.log("✅ 조립품 중심 좌표:", center);
+          setCurrentPosition(center);
+          setBasePosition(center); // ✅ 4단계: 기본 좌표 저장
+        } else {
+          console.warn("⚠️ 조립품에 model 경로가 없습니다");
+        }
+      } else if (mapped.length > 0 && !selectedId) {
+        console.log("🎯 첫 번째 부품 선택:", mapped[0]);
+        setSelectedId(mapped[0].id);
+
+        if (mapped[0].model) {
+          console.log("📍 첫 번째 부품 중심 좌표 계산 시작...");
+          const center = await calculateModelCenter(mapped[0].model);
+          console.log("✅ 첫 번째 부품 중심 좌표:", center);
+          setCurrentPosition(center);
+          setBasePosition(center); // ✅ 4단계: 기본 좌표 저장
+        } else {
+          console.warn("⚠️ 첫 번째 부품에 model 경로가 없습니다");
+        }
+      } else {
+        console.log("ℹ️ 조립품/부품이 없거나 이미 선택됨");
+      }
+    };
+
+    if (apiData) {
+      loadParts();
+    } else {
+      console.warn("⚠️ apiData가 없습니다");
+    }
+  }, [apiData]);
 
   return (
     <div className="bg-white w-full h-full flex flex-row p-4 gap-1 relative overflow-hidden">
@@ -211,9 +341,14 @@ const LeftContainer = ({
             />
           )}
 
+          <CoordinateDisplay
+            position={currentPosition}
+            className="absolute right-4 bottom-20 z-50"
+          />
+
           <button
             onClick={() => setShowBriefing(!showBriefing)}
-            className="absolute bottom-8 left-4 w-10 h-10 rounded-xl cursor-pointer  flex items-center justify-center transition-all z-50"
+            className="absolute bottom-8 left-4 w-10 h-10 rounded-xl cursor-pointer flex items-center justify-center transition-all z-50"
           >
             <img
               src={showBriefing ? AiBriefingIcon : AiNotBriefingIcon}
@@ -236,7 +371,7 @@ const LeftContainer = ({
                     /* 💡 shadows가 false면 그림자가 생성되지 않음 */
                     shadows={isLightOn ? "contact" : false}
                     contactShadow={false}
-                    adjustCamera={true}
+                    adjustCamera={false}
                   >
                     <Center>
                       <AnimationPlayer
@@ -247,6 +382,21 @@ const LeftContainer = ({
                           currentPart?.isAssembly ? null : currentPart?.meshName
                         }
                         overrideMaterial={activeMaterial}
+                        // ✅ 4단계: 애니메이션 위치 업데이트 콜백 추가
+                        onPositionUpdate={(meshName, position) => {
+                          if (currentPart?.meshName === meshName) {
+                            console.log(
+                              "🎬 슬라이딩 좌표 업데이트:",
+                              meshName,
+                              position,
+                            );
+                            setCurrentPosition(position);
+                          }
+                          setAnimatedPositions((prev) => ({
+                            ...prev,
+                            [meshName]: position,
+                          }));
+                        }}
                       />
                     </Center>
                   </Stage>
