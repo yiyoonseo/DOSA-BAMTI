@@ -5,11 +5,7 @@ export const MATERIAL_LIST = [
     id: 0, // 0번으로 기본 재질 추가
     name: "기본 재질",
     desc: "기체 설계 시 표준으로 적용되는 경량 합성 소재입니다.",
-    materialProps: {
-      color: "#E5E7EB", // 표준 그레이 색상
-      metalness: 0.4,
-      roughness: 0.5,
-    },
+    materialProps: null,
   },
   {
     id: 1,

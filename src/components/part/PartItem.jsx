@@ -1,9 +1,32 @@
 import { Canvas } from "@react-three/fiber";
 import { useGLTF, Stage, OrbitControls } from "@react-three/drei";
 import { Suspense, useState } from "react";
+import { useEffect } from "react";
+import * as THREE from "three";
+// PartItem.jsx 내부의 MiniModel 수정
 
 function MiniModel({ url }) {
   const { scene } = useGLTF(url);
+
+  // ✨ 썸네일 모델도 초기 로드 시 질감을 모두 제거합니다.
+  useEffect(() => {
+    scene.traverse((child) => {
+      if (child.isMesh) {
+        // 메인 모델과 동일한 무광 회색(Default Grey) 적용
+        child.material = new THREE.MeshStandardMaterial({
+          color: "#bbbbbb",
+          metalness: 0,
+          roughness: 1,
+        });
+
+        // 기존 텍스처 맵 제거
+        child.material.map = null;
+        child.material.normalMap = null;
+        child.material.needsUpdate = true;
+      }
+    });
+  }, [scene]);
+
   return <primitive object={scene.clone()} />;
 }
 
