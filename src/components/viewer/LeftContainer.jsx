@@ -1,6 +1,13 @@
 import React, { useState, useEffect, Suspense } from "react";
 import { Canvas } from "@react-three/fiber";
-import { OrbitControls, Stage, useGLTF, GizmoHelper, GizmoViewport, Center } from "@react-three/drei";
+import {
+  OrbitControls,
+  Stage,
+  useGLTF,
+  GizmoHelper,
+  GizmoViewport,
+  Center,
+} from "@react-three/drei";
 import AiNote from "./ai/AiNote";
 import PartDetail from "../part/PartDetail";
 import PartList from "../part/PartList";
@@ -196,8 +203,8 @@ const LeftContainer = ({
                 </Suspense>
                 <OrbitControls makeDefault />
                 <GizmoHelper alignment="top-right" margin={[80, 80]}>
-                  <GizmoViewport 
-                    axisColors={['#68A2FF', '#84EBAD', '#FF9191']}
+                  <GizmoViewport
+                    axisColors={["#68A2FF", "#84EBAD", "#FF9191"]}
                     labelColor="white"
                   />
                 </GizmoHelper>
@@ -215,8 +222,8 @@ const LeftContainer = ({
                 </Suspense>
                 <OrbitControls makeDefault autoRotate autoRotateSpeed={0.5} />
                 <GizmoHelper alignment="top-right" margin={[80, 80]}>
-                  <GizmoViewport 
-                    axisColors={['#68A2FF', '#84EBAD', '#FF9191']}
+                  <GizmoViewport
+                    axisColors={["#68A2FF", "#84EBAD", "#FF9191"]}
                     labelColor="white"
                   />
                 </GizmoHelper>
@@ -241,7 +248,7 @@ const LeftContainer = ({
           )}
         </div>
 
-        <div className="flex-[2.5] min-h-[160px] pt-2">
+        <div className="flex-[2.5] max-h-[224px] pt-2">
           <PartDetail selectedPart={currentPart} />
         </div>
       </div>
