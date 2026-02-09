@@ -13,11 +13,13 @@ import {
 import QuizModal from "./QuizModal";
 import NotesModal from "./NotesModal";
 import PdfModal from "./PdfModal";
+import QuizRecordModal from "./QuizRecordModal";
 
 const SideBar = ({ activeMenu, setActiveMenu, allModels = [] }) => {
   const [quizModalOpen, setQuizModalOpen] = useState(false);
   const [notesModalOpen, setNotesModalOpen] = useState(false);
   const [pdfModalOpen, setPdfModalOpen] = useState(false);
+  const [quizRecordModalOpen, setQuizRecordModalOpen] = useState(false);
 
   const handleQuizClick = () => {
     setActiveMenu("퀴즈");
@@ -34,6 +36,11 @@ const SideBar = ({ activeMenu, setActiveMenu, allModels = [] }) => {
     setPdfModalOpen(true);
   };
 
+  const handleQuizRecordClick = () => {
+    setActiveMenu("퀴즈 기록");
+    setQuizRecordModalOpen(true);
+  };
+
   const navGroups = [
     {
       title: "학습",
@@ -47,7 +54,7 @@ const SideBar = ({ activeMenu, setActiveMenu, allModels = [] }) => {
       items: [
         { name: "메모 리스트", icon: FileText, onClick: handleNotesClick },
         { name: "AI 대화 내역", icon: Sparkles },
-        { name: "퀴즈 기록", icon: FolderMinus },
+        { name: "퀴즈 기록", icon: FolderMinus, onClick: handleQuizRecordClick },
         { name: "PDF 출력", icon: Share, onClick: handlePdfClick },
       ],
     },
@@ -93,7 +100,6 @@ const SideBar = ({ activeMenu, setActiveMenu, allModels = [] }) => {
         <nav className="flex flex-col gap-[32px] w-full">
           {navGroups.map((group) => (
             <div key={group.title} className="w-full items-start">
-              {/* 섹션 제목: Detail 12 Reg 스타일 적용 (12px, 160%, -1%) */}
               <div className="text-[#00000066] b-14-med mb-[16px] px-[10px]">
                 {group.title}
               </div>
@@ -159,6 +165,15 @@ const SideBar = ({ activeMenu, setActiveMenu, allModels = [] }) => {
         isOpen={pdfModalOpen}
         onClose={() => {
           setPdfModalOpen(false);
+          setActiveMenu("홈");
+        }}
+        allModels={allModels}
+      />
+
+      <QuizRecordModal
+        isOpen={quizRecordModalOpen}
+        onClose={() => {
+          setQuizRecordModalOpen(false);
           setActiveMenu("홈");
         }}
         allModels={allModels}
