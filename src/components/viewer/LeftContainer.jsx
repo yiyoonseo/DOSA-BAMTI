@@ -7,6 +7,7 @@ import {
   GizmoHelper,
   GizmoViewport,
   Center,
+  TransformControls,
 } from "@react-three/drei";
 import * as THREE from "three";
 
@@ -24,7 +25,15 @@ import { mapModelData } from "../../utils/modelMapper";
 import { fetchAiBriefing } from "../../api/aiAPI";
 import { getChatsByModel } from "../../api/aiDB";
 
-function SinglePartModel({ modelPath, overrideMaterial }) {
+import LightOnIcon from "../../assets/icons/icon-light-on.svg";
+import LightOffIcon from "../../assets/icons/icon-light-off.svg";
+
+function SinglePartModel({
+  modelPath,
+  overrideMaterial,
+  isLightOn,
+  setIsLightOn,
+}) {
   if (!modelPath) return null;
 
   try {
@@ -64,6 +73,8 @@ const LeftContainer = ({
   floatingMessages,
   setFloatingMessages,
   modelId,
+  isLightOn,
+  setIsLightOn,
 }) => {
   const [transformedParts, setTransformedParts] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
@@ -177,6 +188,21 @@ const LeftContainer = ({
 
       <div className="flex-1 flex flex-col gap-3 min-w-0">
         <div className="flex-[7.5] bg-white rounded-2xl relative overflow-hidden flex flex-col">
+          {/* 💡 여기에 조명 버튼 배치 (좌표축 근처) */}
+          <div className="absolute -top-4 right-2 z-50 flex flex-col gap-2">
+            <button
+              onClick={() => setIsLightOn(!isLightOn)}
+              className="w-14 h-14 mt-1 flex items-center justify-center hover:bg-white transition-all"
+              title={isLightOn ? "조명 끄기" : "조명 켜기"}
+            >
+              <img
+                src={isLightOn ? LightOnIcon : LightOffIcon}
+                alt="Light Toggle"
+                className="w-15 h-15"
+              />
+            </button>
+          </div>
+
           {showBriefing && (
             <AiBriefing
               className="absolute left-4 bottom-20 z-50"
@@ -198,12 +224,19 @@ const LeftContainer = ({
 
           <div className="flex-1 relative min-h-0">
             {assemblyPart?.model && showAssembly ? (
-              <Canvas shadows camera={{ position: [4, 0, 4], fov: 50 }}>
+              <Canvas
+                shadows={isLightOn}
+                camera={{ position: [4, 0, 4], fov: 50 }}
+              >
                 <Suspense fallback={null}>
                   <Stage
                     environment="city"
-                    intensity={0.6}
+                    /* 💡 조명이 꺼지면 강도를 0으로, 켜지면 0.6으로 설정 */
+                    intensity={isLightOn ? 0.6 : 0}
+                    /* 💡 shadows가 false면 그림자가 생성되지 않음 */
+                    shadows={isLightOn ? "contact" : false}
                     contactShadow={false}
+                    adjustCamera={true}
                   >
                     <Center>
                       <AnimationPlayer
@@ -218,20 +251,29 @@ const LeftContainer = ({
                     </Center>
                   </Stage>
                 </Suspense>
-                <OrbitControls makeDefault />
+                <OrbitControls
+                  makeDefault
+                  enablePan={true}
+                  panSpeed={1}
+                  screenSpacePanning={true}
+                />
                 <GizmoHelper alignment="top-right" margin={[80, 80]}>
-                  <GizmoViewport 
-                    axisColors={['#68A2FF', '#84EBAD', '#FF9191']}
+                  <GizmoViewport
+                    axisColors={["#68A2FF", "#84EBAD", "#FF9191"]}
                     labelColor="white"
                   />
                 </GizmoHelper>
               </Canvas>
             ) : currentPart?.model ? (
-              <Canvas shadows camera={{ position: [4, 0, 4], fov: 50 }}>
+              <Canvas
+                shadows={isLightOn}
+                camera={{ position: [4, 0, 4], fov: 50 }}
+              >
                 <Suspense fallback={null}>
                   <Stage
                     environment="city"
-                    intensity={0.6}
+                    intensity={isLightOn ? 0.6 : 0}
+                    shadows={isLightOn ? "contact" : false}
                     contactShadow={false}
                   >
                     <SinglePartModel
@@ -240,10 +282,17 @@ const LeftContainer = ({
                     />
                   </Stage>
                 </Suspense>
-                <OrbitControls makeDefault autoRotate autoRotateSpeed={0.5} />
+                <OrbitControls
+                  makeDefault
+                  autoRotate
+                  autoRotateSpeed={0.5}
+                  enablePan={true}
+                  panSpeed={1}
+                  screenSpacePanning={true}
+                />
                 <GizmoHelper alignment="top-right" margin={[80, 80]}>
-                  <GizmoViewport 
-                    axisColors={['#68A2FF', '#84EBAD', '#FF9191']}
+                  <GizmoViewport
+                    axisColors={["#68A2FF", "#84EBAD", "#FF9191"]}
                     labelColor="white"
                   />
                 </GizmoHelper>
