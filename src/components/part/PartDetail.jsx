@@ -178,9 +178,17 @@ const PartDetail = ({ selectedPart, onMaterialSelect }) => {
               key={mat.id}
               onClick={() => {
                 if (!isDragging) {
-                  setSelectedMaterial({ name: mat.name, desc: mat.desc });
-                  // 3. 클릭 시 부모 컴포넌트로 재질 속성 전달
-                  if (onMaterialSelect) onMaterialSelect(mat.materialProps);
+                  setSelectedMaterial(mat); // UI 상의 텍스트와 강조는 유지
+
+                  // ✨ 핵심: ID가 0(기본 재질)이면 null을 전달하여 파란색 상태로 유도
+                  if (mat.id === 0) {
+                    onMaterialSelect(null);
+                  } else {
+                    const propsToSend = mat.materialProps || mat.props;
+                    if (onMaterialSelect && propsToSend) {
+                      onMaterialSelect(propsToSend);
+                    }
+                  }
                 }
               }}
               className={`flex-shrink-0 w-10 h-10 rounded-xl transition-all border-2 

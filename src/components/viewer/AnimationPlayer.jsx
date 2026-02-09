@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from "react";
+import React, { useRef, useEffect, useState } from "react";
 import { useGLTF } from "@react-three/drei";
 import * as THREE from "three";
 
@@ -12,42 +12,47 @@ function AnimationPlayer({
   const gltf = useGLTF(url);
   const mixerRef = useRef(null);
   const actionsRef = useRef([]);
-  const trueOriginalsRef = useRef(new Map()); // 모델의 순수 백지 상태 보관
+  const trueOriginalsRef = useRef(new Map()); // 모델의 순수 원본 재질 보관함
+  const [availableMeshes, setAvailableMeshes] = useState([]);
 
-  // 1. 초기 로드: 원본 재질 보관 및 클론
+  // 1. 초기 로드: 원본 재질을 영구 보관하고 각 메쉬를 독립화합니다.
   useEffect(() => {
     if (!gltf.scene) return;
+
+    const meshNames = [];
     gltf.scene.traverse((child) => {
       if (child.isMesh) {
+        meshNames.push(child.name);
+
+        // 처음 로드될 때 딱 한 번만 진짜 원본 재질(백지 상태)을 저장합니다.
         if (!trueOriginalsRef.current.has(child)) {
           trueOriginalsRef.current.set(child, child.material.clone());
         }
+
+        // 각 메쉬의 재질을 독립적으로 클론하여 다른 부품에 영향이 없도록 합니다.
         child.material = child.material.clone();
       }
     });
-    // 애니메이션 믹서 설정 생략 (기존과 동일)
+    setAvailableMeshes(meshNames);
+
+    // 애니메이션 설정
+    if (gltf.animations && gltf.animations.length > 0) {
+      const mixer = new THREE.AnimationMixer(gltf.scene);
+      mixerRef.current = mixer;
+      actionsRef.current = gltf.animations.map((clip) => {
+        const action = mixer.clipAction(clip);
+        action.play();
+        action.paused = true;
+        return action;
+      });
+    }
+
+    return () => {
+      if (mixerRef.current) mixerRef.current.stopAllAction();
+    };
   }, [gltf]);
 
-  // 하이라이트(파란색) 적용 함수
-  const applyBlueHighlight = (mat) => {
-    mat.color.set(0xaaddff);
-    mat.emissive.set(0x4ba3ff);
-    mat.emissiveIntensity = 0.8;
-    mat.metalness = 0.5;
-    mat.roughness = 0.2;
-  };
-
-  // 재질 속성 적용 함수 (하이라이트 해제 필수)
-  const applyPropsToMaterial = (mat, props, isHighlight) => {
-    if (props.color) mat.color.set(props.color);
-    if (props.metalness !== undefined) mat.metalness = props.metalness;
-    if (props.roughness !== undefined) mat.roughness = props.roughness;
-    // 재질 적용 시 파란색 광택(emissive)을 제거합니다.
-    mat.emissive.set(0x000000);
-    mat.emissiveIntensity = 0;
-  };
-
-  // ✨ 2. 통합 렌더링 로직: 백지 -> 파란색 -> 재질
+  // 2. 통합 로직: 하얀색(원본) -> 파란색(선택) -> 재질(적용) 흐름 제어
   useEffect(() => {
     if (!gltf.scene) return;
 
@@ -58,29 +63,26 @@ function AnimationPlayer({
           : false;
         const originalMat = trueOriginalsRef.current.get(child);
 
-        // A. 부품이 선택된 상태 (selectedPartMesh가 있을 때)
+        // A. 특정 부품이 선택된 상태
         if (selectedPartMesh) {
           if (isTarget) {
+            // 재질 데이터가 있으면 재질 적용, 없으면 파란색 강조
             if (overrideMaterial) {
-              // 단계 3: 재질 적용 (파란색 하이라이트 -> 재질)
-              applyPropsToMaterial(child.material, overrideMaterial, false);
+              applyPropsToMaterial(child.material, overrideMaterial);
             } else {
-              // 단계 2: 파란색 하이라이트 (백지 -> 파란색)
               applyBlueHighlight(child.material);
             }
           } else {
-            // 단계 1: 백지 (나머지는 기본 재질로 초기화)
+            // 선택되지 않은 부품은 무조건 원본(백지) 복구
             if (originalMat) child.material.copy(originalMat);
           }
         }
-        // B. 전체 모델 모드 (Assembly)
+        // B. 전체 모델 모드 (부품 선택이 해제된 상태)
         else {
           if (overrideMaterial) {
-            // 전체 재질 적용 모드
-            applyPropsToMaterial(child.material, overrideMaterial, false);
-          } else {
-            // 전체 초기화 (백지 상태)
-            if (originalMat) child.material.copy(originalMat);
+            applyPropsToMaterial(child.material, overrideMaterial);
+          } else if (originalMat) {
+            child.material.copy(originalMat);
           }
         }
         child.material.needsUpdate = true;
@@ -88,7 +90,44 @@ function AnimationPlayer({
     });
   }, [selectedPartMesh, overrideMaterial, gltf.scene]);
 
+  // 3. 애니메이션 프레임 제어 (기존 유지)
+  useEffect(() => {
+    if (!mixerRef.current || actionsRef.current.length === 0) return;
+
+    const normalizedTime = Math.max(0, Math.min(1, currentFrame / totalFrames));
+    actionsRef.current.forEach((action) => {
+      const clip = action.getClip();
+      action.time = normalizedTime * clip.duration;
+      action.paused = true;
+    });
+    mixerRef.current.update(0);
+  }, [currentFrame, totalFrames]);
+
+  // --- 헬퍼 함수 정의 ---
+
+  // 파란색 강조 적용
+  const applyBlueHighlight = (mat) => {
+    mat.color.set(0xaaddff);
+    mat.emissive.set(0x4ba3ff);
+    mat.emissiveIntensity = 0.8;
+    mat.metalness = 0.5;
+    mat.roughness = 0.2;
+  };
+
+  // 재질 속성 적용 및 강조 광택 제거
+  const applyPropsToMaterial = (mat, props) => {
+    if (props.color) mat.color.set(props.color);
+    if (props.metalness !== undefined) mat.metalness = props.metalness;
+    if (props.roughness !== undefined) mat.roughness = props.roughness;
+
+    // 재질이 적용되면 파란색 발광(emissive) 효과를 끕니다.
+    mat.emissive.set(0x000000);
+    mat.emissiveIntensity = 0;
+  };
+
+  // 이름 매칭 로직
   const isNameMatch = (meshName, searchName) => {
+    if (!meshName || !searchName) return false;
     const clean = (s) =>
       s
         .toLowerCase()
@@ -97,16 +136,7 @@ function AnimationPlayer({
     return clean(meshName) === clean(searchName);
   };
 
-  // 애니메이션 프레임 제어 (기존 로직 유지)
-  useEffect(() => {
-    if (!mixerRef.current || actionsRef.current.length === 0) return;
-    const normalizedTime = Math.max(0, Math.min(1, currentFrame / totalFrames));
-    actionsRef.current.forEach((action) => {
-      action.time = normalizedTime * action.getClip().duration;
-    });
-    mixerRef.current.update(0);
-  }, [currentFrame, totalFrames]);
-
+  // 4. 모델 렌더링
   return <primitive object={gltf.scene} />;
 }
 
