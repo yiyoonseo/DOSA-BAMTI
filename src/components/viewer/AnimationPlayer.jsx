@@ -53,6 +53,36 @@ function AnimationPlayer({
   }, [gltf]);
 
   // 2. 통합 로직: 하얀색(원본) -> 파란색(선택) -> 재질(적용) 흐름 제어
+  // ⚪ 단계 1: 아무런 질감 없는 '완전 회색' 적용 (백지 상태)
+  const applyDefaultGrey = (mat) => {
+    mat.color.set("#bbbbbb"); // 부드러운 중간 회색
+    mat.emissive.set("#000000");
+    mat.emissiveIntensity = 0;
+    mat.metalness = 0; // 금속 광택 제거
+    mat.roughness = 0.8; // 매끄러운 무광 질감
+    mat.map = null; // API/모델에 심긴 텍스처 맵 제거
+    mat.normalMap = null;
+  };
+
+  // 🔵 단계 2: 파란색 강조 (선택됨)
+  const applyBlueHighlight = (mat) => {
+    mat.color.set("#aaddff");
+    mat.emissive.set("#4ba3ff");
+    mat.emissiveIntensity = 0.8;
+    mat.metalness = 0.5;
+    mat.roughness = 0.2;
+  };
+
+  // 🎨 단계 3: 선택한 재질 적용
+  const applyPropsToMaterial = (mat, props) => {
+    if (props.color) mat.color.set(props.color);
+    if (props.metalness !== undefined) mat.metalness = props.metalness;
+    if (props.roughness !== undefined) mat.roughness = props.roughness;
+    mat.emissive.set("#000000");
+    mat.emissiveIntensity = 0;
+  };
+
+  // --- 메인 로직 ---
   useEffect(() => {
     if (!gltf.scene) return;
 
@@ -63,26 +93,24 @@ function AnimationPlayer({
           : false;
         const originalMat = trueOriginalsRef.current.get(child);
 
-        // A. 특정 부품이 선택된 상태
         if (selectedPartMesh) {
           if (isTarget) {
-            // 재질 데이터가 있으면 재질 적용, 없으면 파란색 강조
+            // 💡 재질 데이터가 있으면 재질 적용, 없으면(기본재질 선택 시) 파란색으로!
             if (overrideMaterial) {
               applyPropsToMaterial(child.material, overrideMaterial);
             } else {
               applyBlueHighlight(child.material);
             }
           } else {
-            // 선택되지 않은 부품은 무조건 원본(백지) 복구
-            if (originalMat) child.material.copy(originalMat);
+            // 선택되지 않은 부품은 무조건 '완전 회색'
+            applyDefaultGrey(child.material);
           }
-        }
-        // B. 전체 모델 모드 (부품 선택이 해제된 상태)
-        else {
+        } else {
+          // 전체 모델 모드
           if (overrideMaterial) {
             applyPropsToMaterial(child.material, overrideMaterial);
-          } else if (originalMat) {
-            child.material.copy(originalMat);
+          } else {
+            applyDefaultGrey(child.material);
           }
         }
         child.material.needsUpdate = true;
@@ -106,24 +134,24 @@ function AnimationPlayer({
   // --- 헬퍼 함수 정의 ---
 
   // 파란색 강조 적용
-  const applyBlueHighlight = (mat) => {
-    mat.color.set(0xaaddff);
-    mat.emissive.set(0x4ba3ff);
-    mat.emissiveIntensity = 0.8;
-    mat.metalness = 0.5;
-    mat.roughness = 0.2;
-  };
+  // const applyBlueHighlight = (mat) => {
+  //   mat.color.set(0xaaddff);
+  //   mat.emissive.set(0x4ba3ff);
+  //   mat.emissiveIntensity = 0.8;
+  //   mat.metalness = 0.5;
+  //   mat.roughness = 0.2;
+  // };
 
-  // 재질 속성 적용 및 강조 광택 제거
-  const applyPropsToMaterial = (mat, props) => {
-    if (props.color) mat.color.set(props.color);
-    if (props.metalness !== undefined) mat.metalness = props.metalness;
-    if (props.roughness !== undefined) mat.roughness = props.roughness;
+  // // 재질 속성 적용 및 강조 광택 제거
+  // const applyPropsToMaterial = (mat, props) => {
+  //   if (props.color) mat.color.set(props.color);
+  //   if (props.metalness !== undefined) mat.metalness = props.metalness;
+  //   if (props.roughness !== undefined) mat.roughness = props.roughness;
 
-    // 재질이 적용되면 파란색 발광(emissive) 효과를 끕니다.
-    mat.emissive.set(0x000000);
-    mat.emissiveIntensity = 0;
-  };
+  //   // 재질이 적용되면 파란색 발광(emissive) 효과를 끕니다.
+  //   mat.emissive.set(0x000000);
+  //   mat.emissiveIntensity = 0;
+  // };
 
   // 이름 매칭 로직
   const isNameMatch = (meshName, searchName) => {
