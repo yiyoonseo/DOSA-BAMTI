@@ -75,28 +75,34 @@ async function calculateModelCenter(modelPath) {
   }
 }
 
-function SinglePartModel({
-  modelPath,
-  overrideMaterial,
-  isLightOn,
-  setIsLightOn,
-}) {
+function SinglePartModel({ modelPath, overrideMaterial }) {
   if (!modelPath) return null;
 
   try {
     const { scene } = useGLTF(modelPath);
 
     useEffect(() => {
-      if (!overrideMaterial) return;
       scene.traverse((child) => {
         if (child.isMesh) {
+          // 1. 재질 독립화
           child.material = child.material.clone();
-          if (overrideMaterial.color)
-            child.material.color.set(overrideMaterial.color);
-          if (overrideMaterial.metalness !== undefined)
-            child.material.metalness = overrideMaterial.metalness;
-          if (overrideMaterial.roughness !== undefined)
-            child.material.roughness = overrideMaterial.roughness;
+
+          if (overrideMaterial) {
+            // 2. 재질이 선택된 경우 (카본, 알루미늄 등)
+            if (overrideMaterial.color)
+              child.material.color.set(overrideMaterial.color);
+            if (overrideMaterial.metalness !== undefined)
+              child.material.metalness = overrideMaterial.metalness;
+            if (overrideMaterial.roughness !== undefined)
+              child.material.roughness = overrideMaterial.roughness;
+          } else {
+            // 3. ✨ 기본 재질 선택 시 (overrideMaterial === null)
+            // 아무것도 없는 회색 재질로 명시적 초기화
+            child.material.color.set("#bbbbbb"); // 기본 회색
+            child.material.metalness = 0;
+            child.material.roughness = 0.8;
+          }
+
           child.material.needsUpdate = true;
         }
       });
@@ -104,7 +110,7 @@ function SinglePartModel({
 
     return (
       <Center>
-        <primitive object={scene.clone()} />
+        <primitive object={scene} />
       </Center>
     );
   } catch (error) {
@@ -249,8 +255,6 @@ const LeftContainer = ({
   // ✅ 부품 데이터 로드 및 기본 좌표 설정
   useEffect(() => {
     const loadParts = async () => {
-      console.log("🚀 loadParts 시작, apiData:", apiData);
-
       const mapped = await mapModelData(apiData);
       console.log("📦 매핑된 부품들:", mapped);
 
@@ -295,6 +299,37 @@ const LeftContainer = ({
       console.warn("⚠️ apiData가 없습니다");
     }
   }, [apiData]);
+
+  // useEffect(() => {
+  //   const loadParts = async () => {
+  //     console.log("🚀 loadParts 시작");
+  //     const mapped = await mapModelData(apiData);
+  //     setTransformedParts(mapped);
+
+  //     // 1. 어떤 부품을 초기 선택값으로 할지 먼저 결정합니다.
+  //     const assemblyPart = mapped.find((p) => p.isAssembly);
+  //     const firstPart = mapped.length > 0 ? mapped[0] : null;
+  //     const targetPart = assemblyPart || firstPart;
+
+  //     // 2. 이미 선택된 게 없을 때만 초기화를 진행합니다.
+  //     if (targetPart && !selectedId) {
+  //       console.log("🎯 초기 타겟 설정:", targetPart.name);
+
+  //       // ID를 먼저 확실히 박아줍니다.
+  //       setSelectedId(targetPart.id);
+
+  //       if (targetPart.model) {
+  //         const center = await calculateModelCenter(targetPart.model);
+  //         setCurrentPosition(center);
+  //         setBasePosition(center);
+  //       }
+  //     }
+  //   };
+
+  //   if (apiData) {
+  //     loadParts();
+  //   }
+  // }, [apiData]); // selectedId를 의존성에 넣지 않아야 무한 루프를 방지합니다.
 
   return (
     <div className="bg-white w-full h-full flex flex-row p-4 gap-1 relative overflow-hidden">
@@ -429,6 +464,7 @@ const LeftContainer = ({
                     <SinglePartModel
                       modelPath={currentPart.model}
                       overrideMaterial={activeMaterial}
+                      // meshName={currentPart.name}
                     />
                   </Stage>
                 </Suspense>

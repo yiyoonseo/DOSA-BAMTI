@@ -178,12 +178,14 @@ const PartDetail = ({ selectedPart, onMaterialSelect }) => {
               key={mat.id}
               onClick={() => {
                 if (!isDragging) {
-                  setSelectedMaterial(mat); // UI 상의 텍스트와 강조는 유지
+                  // 1. UI 표시를 위해 상태 업데이트 (비동기)
+                  setSelectedMaterial(mat);
 
-                  // ✨ 핵심: ID가 0(기본 재질)이면 null을 전달하여 파란색 상태로 유도
+                  // 2. 부모에게는 '상태'가 아니라 '클릭한 놈(mat)'을 직접 전달 (즉시 반영)
                   if (mat.id === 0) {
                     onMaterialSelect(null);
                   } else {
+                    // 🚨 selectedMaterial.props가 아니라 mat.materialProps를 직접 씁니다!
                     const propsToSend = mat.materialProps || mat.props;
                     if (onMaterialSelect && propsToSend) {
                       onMaterialSelect(propsToSend);

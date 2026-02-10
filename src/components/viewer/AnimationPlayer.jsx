@@ -113,29 +113,30 @@ function AnimationPlayer({
   //   });
   // }, [selectedPartMesh, overrideMaterial, gltf.scene]);
 
-  // AnimationPlayer.jsx 내부
   useEffect(() => {
     if (!gltf.scene) return;
 
-    console.log("--- 🧐 현재 선택된 부품명(Prop):", selectedPartMesh); // 현재 선택된 부품 이름
-
     gltf.scene.traverse((child) => {
       if (child.isMesh) {
-        // 🚨 여기서 모든 메쉬의 이름을 출력합니다.
-        console.log("🤖 모델 내 메쉬 이름:", child.name);
+        // 1. 전체 선택 모드인지 확인 (selectedPartMesh가 없거나 'assembly'일 때)
+        const isAssemblyMode =
+          !selectedPartMesh || selectedPartMesh === "assembly";
 
-        const isTarget = selectedPartMesh
-          ? isNameMatch(child.name, selectedPartMesh)
-          : false;
+        // 2. 개별 부품이 선택되었는지 확인
+        const isTarget = isAssemblyMode
+          ? true
+          : isNameMatch(child.name, selectedPartMesh);
 
         if (isTarget) {
-          console.log("✅ 매칭 성공! 이 부품에 색을 칠합니다:", child.name);
+          // 전체 모드이거나 선택된 부품일 때 재질 적용
           if (overrideMaterial) {
             applyPropsToMaterial(child.material, overrideMaterial);
           } else {
+            // 기본 재질 선택 시 파란색 하이라이트(또는 기본색)
             applyBlueHighlight(child.material);
           }
         } else {
+          // 선택되지 않은 부품은 회색 처리
           applyDefaultGrey(child.material);
         }
         child.material.needsUpdate = true;
