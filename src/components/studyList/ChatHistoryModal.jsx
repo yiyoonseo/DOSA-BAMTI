@@ -68,9 +68,17 @@ const ChatHistoryModal = ({ isOpen, onClose, allModels }) => {
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[10000] animate-fade-in">
       <div className="bg-white rounded-xl w-[850px] h-[80vh] overflow-hidden flex flex-col">
-        {/* 헤더 */}
         <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center shrink-0">
           <div className="flex items-center gap-3">
+            {/* ⬅️ 뒤로가기 버튼 추가: selectedChat이 있을 때만 표시 */}
+            {selectedChat && (
+              <button
+                onClick={() => setSelectedChat(null)}
+                className="mr-1 p-1 hover:bg-bg-2 rounded-lg transition-colors group"
+              >
+                <ArrowLeft className="w-6 h-6 text-acc-blue" />
+              </button>
+            )}
             <h2 className="t-18-bold text-gray-900">
               {selectedChat ? "대화 상세 내용" : "AI 대화 내역"}
             </h2>
@@ -96,7 +104,7 @@ const ChatHistoryModal = ({ isOpen, onClose, allModels }) => {
                   <div
                     className={`max-w-[85%] p-4 rounded-xl border b-14-med ${
                       msg.role === "user"
-                        ? "bg-main-1 text-white"
+                        ? "bg-acc-blue text-white"
                         : "bg-white text-gray-800 border-gray-100"
                     }`}
                   >
@@ -152,22 +160,22 @@ const ChatHistoryModal = ({ isOpen, onClose, allModels }) => {
               {Object.entries(groupedChats).map(([modelId, chats]) => (
                 <div
                   key={modelId}
-                  className="border border-gray-100 rounded-xl overflow-hidden bg-white"
+                  className=" rounded-xl overflow-hidden bg-gray-1 "
                 >
                   <div
                     onClick={() => toggleFolder(modelId)}
-                    className="flex items-center gap-4 p-4 cursor-pointer hover:bg-gray-50 transition-colors"
+                    className="flex items-center gap-4 p-4 cursor-pointer hover:bg-acc-blue-light/10 transition-colors"
                   >
                     {expandedFolders.has(modelId) ? (
                       <ChevronDown className="w-5 h-5" />
                     ) : (
                       <ChevronRight className="w-5 h-5" />
                     )}
-                    <Folder className="w-5 h-5 text-main-1" />
+                    <Folder className="w-5 h-5 text-acc-blue" />
                     <span className="t-16-bold flex-1">
                       {MODEL_NAMES[modelId] || "알 수 없음"}
                     </span>
-                    <span className="text-xs text-gray-400">
+                    <span className="d-12-reg text-gray-400">
                       {chats.length}개의 세션
                     </span>
                   </div>
@@ -178,18 +186,18 @@ const ChatHistoryModal = ({ isOpen, onClose, allModels }) => {
                         <div
                           key={chat.chatId}
                           onClick={() => setSelectedChat(chat)}
-                          className="p-4 hover:bg-blue-50/50 cursor-pointer transition-colors"
+                          className="p-4 hover:bg-acc-blue-light/5 cursor-pointer transition-colors"
                         >
-                          <div className="t-15-semi text-gray-800 mb-1 truncate">
+                          <div className="b-16-med text-gray-800 mb-1 truncate">
                             {chat.messages.find((m) => m.role === "user")
                               ?.content || "새로운 대화"}
                           </div>
-                          <div className="flex justify-between items-center text-[11px] text-gray-400">
+                          <div className="flex justify-between items-center d-12-reg text-gray-400">
                             <span className="flex items-center gap-1">
                               <Clock className="w-3 h-3" />{" "}
                               {new Date(chat.lastUpdated).toLocaleString()}
                             </span>
-                            <span className="text-main-1 font-bold">
+                            <span className="text-acc-blue d-12-med">
                               메시지 {chat.messages.length}개
                             </span>
                           </div>
