@@ -99,6 +99,9 @@
   .t-24-bold {
     @apply font-pretendard text-[24px] font-bold leading-[1.2];
   }
+  .t-32-bold {
+    @apply font-pretendard text-[32px] font-bold leading-[1.2];
+  }
 
   /* --- Body Typography --- */
   .b-10-semi {
