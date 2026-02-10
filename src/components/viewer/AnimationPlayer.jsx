@@ -20,19 +20,23 @@ function AnimationPlayer({
   useEffect(() => {
     if (!gltf.scene) return;
 
-    const meshNames = [];
     gltf.scene.traverse((child) => {
       if (child.isMesh) {
-        meshNames.push(child.name);
-
+        // 1. 원본 재질 보관 (이미 되어 있다면 패스)
         if (!trueOriginalsRef.current.has(child)) {
           trueOriginalsRef.current.set(child, child.material.clone());
         }
 
+        // 2. ✨ 핵심: 각 mesh에게 고유한 material 객체를 새로 할당
+        // 이렇게 해야 한 놈을 색칠할 때 다른 놈이 안 변합니다.
         child.material = child.material.clone();
+
+        // 만약 재질이 배열(Multi-material)인 경우를 대비한 안전장치
+        if (Array.isArray(child.material)) {
+          child.material = child.material.map((m) => m.clone());
+        }
       }
     });
-    setAvailableMeshes(meshNames);
 
     // 애니메이션 설정
     if (gltf.animations && gltf.animations.length > 0) {
@@ -78,31 +82,62 @@ function AnimationPlayer({
   };
 
   // --- 메인 로직 ---
+  // useEffect(() => {
+  //   if (!gltf.scene) return;
+
+  //   gltf.scene.traverse((child) => {
+  //     if (child.isMesh) {
+  //       const isTarget = selectedPartMesh
+  //         ? isNameMatch(child.name, selectedPartMesh)
+  //         : false;
+
+  //       if (selectedPartMesh) {
+  //         if (isTarget) {
+  //           if (overrideMaterial) {
+  //             applyPropsToMaterial(child.material, overrideMaterial);
+  //           } else {
+  //             applyBlueHighlight(child.material);
+  //           }
+  //         } else {
+  //           applyDefaultGrey(child.material);
+  //         }
+  //       } else {
+  //         if (overrideMaterial) {
+  //           applyPropsToMaterial(child.material, overrideMaterial);
+  //         } else {
+  //           applyDefaultGrey(child.material);
+  //         }
+  //       }
+  //       child.material.needsUpdate = true;
+  //     }
+  //   });
+  // }, [selectedPartMesh, overrideMaterial, gltf.scene]);
+
   useEffect(() => {
     if (!gltf.scene) return;
 
     gltf.scene.traverse((child) => {
       if (child.isMesh) {
-        const isTarget = selectedPartMesh
-          ? isNameMatch(child.name, selectedPartMesh)
-          : false;
+        // 1. 전체 선택 모드인지 확인 (selectedPartMesh가 없거나 'assembly'일 때)
+        const isAssemblyMode =
+          !selectedPartMesh || selectedPartMesh === "assembly";
 
-        if (selectedPartMesh) {
-          if (isTarget) {
-            if (overrideMaterial) {
-              applyPropsToMaterial(child.material, overrideMaterial);
-            } else {
-              applyBlueHighlight(child.material);
-            }
-          } else {
-            applyDefaultGrey(child.material);
-          }
-        } else {
+        // 2. 개별 부품이 선택되었는지 확인
+        const isTarget = isAssemblyMode
+          ? true
+          : isNameMatch(child.name, selectedPartMesh);
+
+        if (isTarget) {
+          // 전체 모드이거나 선택된 부품일 때 재질 적용
           if (overrideMaterial) {
             applyPropsToMaterial(child.material, overrideMaterial);
           } else {
-            applyDefaultGrey(child.material);
+            // 기본 재질 선택 시 파란색 하이라이트(또는 기본색)
+            applyBlueHighlight(child.material);
           }
+        } else {
+          // 선택되지 않은 부품은 회색 처리
+          applyDefaultGrey(child.material);
         }
         child.material.needsUpdate = true;
       }
@@ -145,14 +180,19 @@ function AnimationPlayer({
   // 이름 매칭 로직
   const isNameMatch = (meshName, searchName) => {
     if (!meshName || !searchName) return false;
-    const clean = (s) =>
-      s
-        .toLowerCase()
-        .replace(/[-_\s.]/g, "")
-        .replace(/\d+$/, "");
-    return clean(meshName) === clean(searchName);
-  };
 
+    // 소문자로 바꾸고 공백/기호만 제거 (숫자는 유지!)
+    const clean = (s) => s.toLowerCase().replace(/[-_\s.]/g, "");
+
+    const cleanedMesh = clean(meshName); // 예: part_3_1 -> part31
+    const cleanedSearch = clean(searchName); // 예: part_3 -> part3
+
+    // 1. 이름이 완전히 같거나
+    // 2. meshName이 searchName으로 시작하는 경우 (예: part31은 part3에 포함됨)
+    return (
+      cleanedMesh === cleanedSearch || cleanedMesh.startsWith(cleanedSearch)
+    );
+  };
   // 4. 모델 렌더링
   return <primitive object={gltf.scene} />;
 }
