@@ -193,15 +193,14 @@ const PartDetail = ({ selectedPart, onMaterialSelect }) => {
                   }
                 }
               }}
-              className={`flex-shrink-0 w-10 h-10 rounded-xl transition-all border-2 
-                ${selectedMaterial.name === mat.name ? "border-[#4ade80]" : "border-transparent opacity-70"}
+              className={`flex-shrink-0 w-12 h-12 rounded-xl transition-all border-px bg-gray-3 p-2
+                ${selectedMaterial.name === mat.name ? "border border-main-1 shadow-md" : "border-transparent opacity-70"}
               `}
             >
-              <div
-                className="w-full h-full rounded-lg bg-gray-200 shadow-inner"
-                style={{
-                  background: `radial-gradient(circle at 30% 30%, #888, #222)`,
-                }}
+              <img
+                src={mat.img}
+                alt={mat.name}
+                className="w-full h-full object-cover rounded-xl"
               />
             </div>
           ))}
