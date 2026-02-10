@@ -63,16 +63,29 @@ const NoteInput = ({
   const handleFileChange = (e, type) => {
     const file = e.target.files[0];
     if (file) {
-      const previewUrl = type === "image" ? URL.createObjectURL(file) : null;
-
-      const newAttach = {
-        id: Date.now(),
-        type,
-        name: file.name,
-        file,
-        previewUrl,
-      };
-      setAttachments((prev) => [...prev, newAttach]);
+      if (type === "image") {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const base64String = reader.result; // 이미지를 Base64 문자열로 변환
+          const newAttach = {
+            id: Date.now(),
+            type,
+            name: file.name,
+            previewUrl: base64String, // 이제 이 주소는 영구적입니다(데이터 자체가 저장됨)
+          };
+          setAttachments((prev) => [...prev, newAttach]);
+        };
+        reader.readAsDataURL(file);
+      } else {
+        // 일반 파일은 기존 로직 유지 (필요 시)
+        const newAttach = {
+          id: Date.now(),
+          type,
+          name: file.name,
+          file,
+        };
+        setAttachments((prev) => [...prev, newAttach]);
+      }
       setIsAttachMenuOpen(false);
     }
   };

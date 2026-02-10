@@ -20,7 +20,11 @@ const NoteFull = ({ note, onClose, onDelete, onEdit }) => {
   if (!note) return null;
 
   const imageAttachments =
-    note.attachments?.filter((item) => item.type === "image") || [];
+    note.attachments?.filter(
+      (item) =>
+        item.type === "image" ||
+        (item.file && item.file.type?.startsWith("image/")),
+    ) || [];
 
   return (
     <div className="h-full flex flex-col bg-white animate-fade-in p-6 overflow-hidden custom-scrollbar">
@@ -61,8 +65,8 @@ const NoteFull = ({ note, onClose, onDelete, onEdit }) => {
               <span
                 className={`px-3 py-1 rounded-full b-14-bold ${
                   note.type === "important"
-                    ? "bg-acc-red text-white"
-                    : "bg-acc-blue text-white"
+                    ? "bg-acc-red-light text-white"
+                    : "bg-acc-blue-light text-white"
                 }`}
               >
                 {note.type === "important" ? "중요" : "일반"}
@@ -120,19 +124,28 @@ const NoteFull = ({ note, onClose, onDelete, onEdit }) => {
           </h1>
         )}
 
-        {imageAttachments.length > 0 && (
+        {imageAttachments.length > 0 ? (
           <div className="flex gap-3 overflow-x-auto no-scrollbar">
             {imageAttachments.map((img, idx) => (
               <div key={idx} className="shrink-0">
                 <img
                   src={img.previewUrl || img.url}
                   alt={img.name}
-                  className="h-64 w-auto object-cover rounded-xl border border-[#D5D5D5] cursor-pointer hover:opacity-90 transition-opacity"
-                  onClick={() => setSelectedImage(img.previewUrl || img.url)}
+                  className="h-64 w-auto object-cover rounded-xl border border-[#D5D5D5]"
+                  onError={(e) => {
+                    console.error("이미지 로드 실패:", img.name);
+                    e.target.style.display = "none"; // 로드 실패 시 숨김 처리 방지하려면 제거
+                  }}
                 />
               </div>
             ))}
           </div>
+        ) : (
+          note.attachments?.length > 0 && (
+            <div className="text-xs text-gray-400">
+              이미지를 불러올 수 없습니다.
+            </div>
+          )
         )}
       </div>
 

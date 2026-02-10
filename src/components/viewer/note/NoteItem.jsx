@@ -112,8 +112,8 @@ const NoteItem = ({
               <span
                 className={`px-2.5 py-1 rounded-full text-[10px] font-bold whitespace-nowrap ${
                   note.type === "important"
-                    ? "bg-acc-red text-white"
-                    : "bg-acc-blue text-white"
+                    ? "bg-acc-red-light text-white"
+                    : "bg-acc-blue-light text-white"
                 }`}
               >
                 {note.type === "important" ? "중요" : "일반"}
