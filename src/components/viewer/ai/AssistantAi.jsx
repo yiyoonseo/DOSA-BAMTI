@@ -1,13 +1,11 @@
-import React, { useState, useEffect, useRef } from "react";
-import {
-  Camera,
-  FolderPlus,
-  Plus,
-  ArrowUp,
-  X,
-  Link as LinkIcon,
-} from "lucide-react";
-import IconPaperClip from "../../../assets/icons/icon-paperclip.svg";
+import React, {
+  useState,
+  useEffect,
+  useRef,
+  useMemo,
+  useCallback,
+} from "react";
+import { Camera, FolderPlus, Plus, ArrowUp, X, File } from "lucide-react";
 import { fetchAiResponse } from "../../../api/aiAPI";
 import { getChatsByModel, saveChat, getLastChatId } from "../../../api/aiDB";
 
@@ -16,11 +14,14 @@ const AssistantAi = ({
   modelId,
   currentChatId,
   setCurrentChatId,
+  messages,
+  setMessages,
+  setPdfSummary,
+  onMessagesUpdate,
 }) => {
-  const [messages, setMessages] = useState([]);
   const [inputValue, setInputValue] = useState("");
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [selectedItem, setSelectedItem] = useState(null);
+  const [selectedFiles, setSelectedFiles] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isDbLoading, setIsDbLoading] = useState(true);
 
@@ -28,118 +29,186 @@ const AssistantAi = ({
   const imageInputRef = useRef(null);
   const fileInputRef = useRef(null);
 
-  // 2. 아예 데이터가 없을 때만 실행되는 초기 생성
-  const createNewInitialChat = async () => {
-    const lastId = await getLastChatId();
-    const newId = lastId + 1;
-    const initialMsg = [
+  const initialMsg = useMemo(
+    () => [
       {
-        id: 1,
+        id: Date.now(),
         role: "assistant",
         content: "안녕하세요! 무엇이 궁금하신가요?",
       },
-    ];
+    ],
+    [],
+  );
 
-    await saveChat({ chatId: newId, modelId, messages: initialMsg });
-    setCurrentChatId(newId);
-    setMessages(initialMsg);
-  };
-
-  // 1. 초기 로드 및 chatId 변경 대응
+  // 1. 세션 로드 및 PDF 요약 데이터 동기화
   useEffect(() => {
-    const loadSession = async () => {
+    const initSession = async () => {
+      if (!modelId) return;
       setIsDbLoading(true);
+
       try {
         const savedChats = await getChatsByModel(modelId);
 
+        // 과거 요약본들 추출 (중복 방지를 위해 기존 데이터와 병합)
+        const pastSummaries = savedChats
+          .filter((chat) => chat.summary)
+          .map((chat) => {
+            const parsed =
+              typeof chat.summary === "string"
+                ? JSON.parse(chat.summary)
+                : chat.summary;
+            return {
+              title: parsed.title || "지난 학습 요약",
+              items: parsed.items || [],
+              date: new Date(chat.lastUpdated).toLocaleDateString(),
+            };
+          });
+
+        if (pastSummaries.length > 0) {
+          setPdfSummary((prev) => {
+            // 이미 존재하는 타이틀은 제외하고 추가
+            const existingTitles = new Set(prev.map((p) => p.title));
+            const newSummaries = pastSummaries.filter(
+              (p) => !existingTitles.has(p.title),
+            );
+            return [...prev, ...newSummaries];
+          });
+        }
+
+        // 현재 채팅 세션 설정
         if (currentChatId) {
-          // 💡 부모(AiNote)가 준 ID가 DB에 있는지 확인
-          const target = savedChats.find((c) => c.chatId === currentChatId);
+          const target = savedChats.find(
+            (c) => Number(c.chatId) === Number(currentChatId),
+          );
           if (target) {
             setMessages(target.messages);
+            if (onMessagesUpdate) onMessagesUpdate(target.messages);
           } else {
-            // 💡 ID는 있지만 DB에 아직 없다면(방금 생성된 경우), 빈 배열로 시작
-            setMessages([]);
+            setMessages(initialMsg);
           }
         } else if (savedChats.length > 0) {
-          const lastSession = savedChats.sort(
+          const lastSession = [...savedChats].sort(
             (a, b) => b.lastUpdated - a.lastUpdated,
           )[0];
           setCurrentChatId(lastSession.chatId);
           setMessages(lastSession.messages);
         } else {
-          await createNewInitialChat();
+          const lastId = await getLastChatId();
+          setCurrentChatId((Number(lastId) || 0) + 1);
+          setMessages(initialMsg);
         }
       } catch (error) {
-        console.error("세션 로드 중 에러:", error);
+        console.error("세션 로드 실패:", error);
       } finally {
-        // ✅ 어떤 경우에도 로딩 상태를 해제하여 화면을 보여줌
         setIsDbLoading(false);
       }
     };
 
-    if (modelId) loadSession();
-  }, [modelId, currentChatId]);
+    initSession();
+  }, [modelId, currentChatId]); // 의존성에서 setMessages, setPdfSummary 제외하여 무한루프 방지
 
-  // 3. 스크롤 제어
+  // 2. 메시지 변경 시 부모 컴포넌트(Viewer)로 데이터 전송
   useEffect(() => {
+    if (onMessagesUpdate && messages.length > 0) {
+      onMessagesUpdate(messages);
+    }
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [messages, isLoading]);
+  }, [messages, onMessagesUpdate]);
 
-  // 4. 메시지 전송 및 저장
+  // 3. 메시지 전송 로직
   const handleSendMessage = async () => {
-    if (!inputValue.trim() || isLoading || !modelName) {
-      console.warn("⚠️ modelName이 아직 준비되지 않았습니다.");
+    if (
+      (!inputValue.trim() && selectedFiles.length === 0) ||
+      isLoading ||
+      !modelName ||
+      !currentChatId
+    )
       return;
-    }
-    if (!inputValue.trim() || isLoading) return;
 
     const userText = inputValue;
     const newUserMsg = {
       id: Date.now(),
       role: "user",
       content: userText,
-      attachment: selectedItem,
+      attachments: [...selectedFiles],
     };
 
-    // 사용자 메시지 저장
     const updatedWithUser = [...messages, newUserMsg];
     setMessages(updatedWithUser);
-    await saveChat({
-      chatId: currentChatId,
-      modelId,
-      messages: updatedWithUser,
-    });
-
     setInputValue("");
-    setSelectedItem(null);
-    setIsMenuOpen(false);
+    setSelectedFiles([]);
     setIsLoading(true);
 
-    // AI 응답 호출
-    const aiReply = await fetchAiResponse(modelName, userText);
-    const newAiMsg = {
-      id: Date.now() + 1,
-      role: "assistant",
-      content: aiReply,
-    };
+    try {
+      const aiReply = await fetchAiResponse(modelName, userText);
 
-    // AI 메시지 최종 저장
-    const finalMessages = [...updatedWithUser, newAiMsg];
-    setMessages(finalMessages);
-    await saveChat({ chatId: currentChatId, modelId, messages: finalMessages });
+      let summaryData = null;
+      if (aiReply && aiReply.summary) {
+        summaryData =
+          typeof aiReply.summary === "string"
+            ? JSON.parse(aiReply.summary)
+            : aiReply.summary;
 
-    setIsLoading(false);
+        const newSummaryEntry = {
+          title: summaryData.title || "실시간 학습 요약",
+          items: summaryData.items || [],
+          date: new Date().toLocaleDateString(),
+        };
+        // PDF 데이터 즉시 반영
+        setPdfSummary((prev) => [...prev, newSummaryEntry]);
+      }
+
+      const aiContent =
+        aiReply.answer ||
+        aiReply.content ||
+        (typeof aiReply === "string" ? aiReply : "");
+      const newAiMsg = {
+        id: Date.now() + 1,
+        role: "assistant",
+        content: aiContent,
+      };
+
+      const finalMessages = [...updatedWithUser, newAiMsg];
+      setMessages(finalMessages);
+
+      // DB 저장
+      await saveChat({
+        chatId: Number(currentChatId),
+        modelId: String(modelId),
+        messages: finalMessages,
+        summary: aiReply.summary, // 원본 summary 저장
+        lastUpdated: Date.now(),
+      });
+    } catch (error) {
+      console.error("메시지 전송 실패:", error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
+  // 파일 핸들러 (생략된 기존 로직과 동일)
   const handleFileChange = (e, type) => {
-    const file = e.target.files[0];
-    if (file) {
-      setSelectedItem({ type, name: file.name, file });
-      setIsMenuOpen(false);
-    }
+    const files = Array.from(e.target.files);
+    files.forEach((file) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setSelectedFiles((prev) => [
+          ...prev,
+          {
+            id: Date.now() + Math.random(),
+            type,
+            name: file.name,
+            preview: reader.result,
+          },
+        ]);
+      };
+      if (type === "image") reader.readAsDataURL(file);
+      else reader.readAsText(file);
+    });
+    setIsMenuOpen(false);
+    e.target.value = null;
   };
 
   if (isDbLoading)
@@ -167,17 +236,27 @@ const AssistantAi = ({
                   : "bg-white border border-bg-1 border-[1.5px] text-gray-9 rounded-[8px]"
               }`}
             >
-              {msg.content}
-              {msg.attachment && (
-                <div className="mt-2 pt-2 border-t border-gray-400/20 text-[11px] flex items-center gap-1 opacity-80">
-                  {msg.attachment.type === "link" ? (
-                    <img src={IconPaperClip} alt="link" className="w-3 h-3" />
-                  ) : (
-                    "📁"
-                  )}
-                  {msg.attachment.name}
-                </div>
-              )}
+              {msg.attachments
+                ?.filter((a) => a.type === "image")
+                .map((img) => (
+                  <img
+                    key={img.id}
+                    src={img.preview}
+                    alt="attached"
+                    className="w-24 h-24 object-cover rounded-md border mb-2"
+                  />
+                ))}
+              <div className="whitespace-pre-wrap">{msg.content}</div>
+              {msg.attachments
+                ?.filter((a) => a.type !== "image")
+                .map((file) => (
+                  <div
+                    key={file.id}
+                    className="mt-2 pt-2 border-t border-gray-100 text-[11px] flex items-center gap-1 opacity-70"
+                  >
+                    <File size={12} /> {file.name}
+                  </div>
+                ))}
             </div>
           </div>
         ))}
@@ -190,15 +269,36 @@ const AssistantAi = ({
         )}
       </div>
 
+      {/* 입력부 (기존 UI 유지) */}
       <div className="bg-white relative m-[25px] shrink-0">
-        {selectedItem && (
-          <div className="absolute bottom-full left-5 mb-2 flex items-center gap-2 bg-main-2 text-white px-3 py-1.5 rounded-full text-xs">
-            <span>
-              {selectedItem.type === "link" ? "🔗" : "📁"} {selectedItem.name}
-            </span>
-            <button onClick={() => setSelectedItem(null)}>
-              <X size={14} />
-            </button>
+        {selectedFiles.length > 0 && (
+          <div className="absolute bottom-full left-0 mb-3 flex flex-wrap gap-2 p-2 bg-gray-50/80 backdrop-blur-sm rounded-xl border border-gray-100 w-full max-h-32 overflow-y-auto">
+            {selectedFiles.map((file) => (
+              <div key={file.id} className="relative group">
+                {file.type === "image" ? (
+                  <img
+                    src={file.preview}
+                    className="w-16 h-16 object-cover rounded-lg border border-gray-200"
+                    alt="preview"
+                  />
+                ) : (
+                  <div className="h-16 px-3 flex items-center gap-2 bg-white border border-gray-200 rounded-lg text-xs text-gray-600">
+                    <File size={14} />{" "}
+                    <span className="max-w-[80px] truncate">{file.name}</span>
+                  </div>
+                )}
+                <button
+                  onClick={() =>
+                    setSelectedFiles((prev) =>
+                      prev.filter((f) => f.id !== file.id),
+                    )
+                  }
+                  className="absolute -top-2 -right-2 bg-gray-900 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100"
+                >
+                  <X size={12} />
+                </button>
+              </div>
+            ))}
           </div>
         )}
 
@@ -212,34 +312,38 @@ const AssistantAi = ({
           <input
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
-            onKeyPress={(e) => e.key === "Enter" && handleSendMessage()}
-            // 💡 modelName이 없으면 입력창 비활성화
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.nativeEvent.isComposing)
+                handleSendMessage();
+            }}
             disabled={!modelName || isLoading}
             placeholder={
               !modelName ? "모델 정보를 불러오는 중..." : "메시지를 입력하세요."
             }
-            className="outline-none flex-1 p-2 rounded-lg b-16-med"
+            className="outline-none flex-1 min-w-0 p-2 bg-transparent b-16-med"
           />
           <button
             onClick={handleSendMessage}
-            disabled={!inputValue.trim() || isLoading}
-            className="p-2 rounded-full text-white bg-main-1 hover:bg-bg-1 hover:text-main-1 disabled:bg-gray-300"
+            disabled={
+              (!inputValue.trim() && selectedFiles.length === 0) || isLoading
+            }
+            className={`p-2 rounded-full text-white transition-colors ${(!inputValue.trim() && selectedFiles.length === 0) || isLoading ? "bg-gray-300" : "bg-main-1 hover:bg-sky-700"}`}
           >
             <ArrowUp size={20} />
           </button>
         </div>
 
         {isMenuOpen && (
-          <div className="absolute bottom-[60px] left-0 bg-white rounded-2xl shadow-md border p-3 min-w-[180px] z-50">
+          <div className="absolute bottom-[60px] left-0 bg-white rounded-[12px] shadow-md border-gray-5 border-[1.5px] p-2 min-w-[180px] z-50">
             <button
               onClick={() => imageInputRef.current.click()}
-              className="flex items-center gap-3 w-full p-2 hover:bg-gray-100 rounded-xl text-sm text-gray-500"
+              className="flex items-center gap-3 w-full p-2 hover:bg-gray-1 rounded-[8px] b-14-reg-160 text-gray-6"
             >
               <Camera size={20} /> 사진 첨부
             </button>
             <button
               onClick={() => fileInputRef.current.click()}
-              className="flex items-center gap-3 w-full p-2 hover:bg-gray-100 rounded-xl text-sm text-gray-500"
+              className="flex items-center gap-3 w-full p-2 hover:bg-gray-1 rounded-[8px] b-14-reg-160 text-gray-6"
             >
               <FolderPlus size={20} /> 파일 첨부
             </button>
@@ -247,16 +351,17 @@ const AssistantAi = ({
         )}
       </div>
 
-      {/* 숨겨진 Input */}
       <input
         type="file"
         accept="image/*"
+        multiple
         ref={imageInputRef}
         className="hidden"
         onChange={(e) => handleFileChange(e, "image")}
       />
       <input
         type="file"
+        multiple
         ref={fileInputRef}
         className="hidden"
         onChange={(e) => handleFileChange(e, "file")}

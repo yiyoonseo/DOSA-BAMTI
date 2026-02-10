@@ -39,16 +39,17 @@ const MACHINE_VICE_FILE_MAP = {
   part_8_grundplatte: "Part8-grundplatte.glb",
 };
 
-// 4. Robot Arm 파일명 매핑
+// 4. RobotArm 파일명 매핑
 const ROBOT_ARM_FILE_MAP = {
-  base: "base.glb",
-  part2: "Part2.glb",
-  part3: "Part3.glb",
-  part4: "Part4.glb",
-  part5: "Part5.glb",
-  part6: "Part6.glb",
-  part7: "Part7.glb",
-  part8: "Part8.glb",
+  // "API meshName": "로컬 파일명"
+  "base": "base.glb",
+  "part_2": "part_2.glb",
+  "part_3": "part_3.glb",
+  "part_4": "part_4.glb",
+  "part_5": "part_5.glb",
+  "part_6": "part_6.glb",
+  "part_7": "part_7.glb",
+  "part_8": "part_8.glb",
 };
 
 // 5. RobotGripper 파일명 매핑
@@ -195,48 +196,6 @@ const HARDCODED_PARTS = {
       description: "리프 스프링 시스템 전체를 지지하는 기본 베이스입니다.\n무게: 약 4.2kg\n\n⚠️ 주의사항: 용접 열영향부(HAZ) 강도 저하 주의\n\n📖 시험 포인트:\n- 하중 분산 설계 원리\n- 용접 강도 계산\n- 피로 균열 성장 속도와 안전율" 
     },
   ],
-  "Robot Arm": [
-    { 
-      meshName: "base", 
-      name: "Rotating Base", 
-      description: "로봇 암 전체를 지탱하고 회전축을 제공하는 고정 베이스입니다.\n무게: 약 8.5kg\n\n⚠️ 주의사항: 회전 범위 ±180도 제한, 케이블 꼬임 방지\n\n📖 시험 포인트:\n- 회전 관성 모멘트 (I = mr²)\n- 베어링 하중 계산\n- 모터 토크 선정 기준" 
-    },
-    { 
-      meshName: "part2", 
-      name: "Shoulder Joint", 
-      description: "베이스와 연결되어 수직 운동을 담당하는 어깨 관절입니다.\n최대 토크: 50N·m\n무게: 약 6.2kg\n\n⚠️ 주의사항: 과부하 시 모터 과열 위험\n\n📖 시험 포인트:\n- 관절 가동 범위(ROM)\n- 특이점(Singularity) 회피\n- 역기구학(Inverse Kinematics) 계산" 
-    },
-    { 
-      meshName: "part3", 
-      name: "Upper Arm Link", 
-      description: "로봇 팔의 상완부로 주요 동작 범위를 제공합니다.\n길이: 450mm (중공 구조)\n무게: 약 3.8kg\n\n⚠️ 주의사항: 최대 가반하중 5kg 초과 금지\n\n📖 시험 포인트:\n- 보(Beam) 처짐 계산\n- 좌굴 하중 분석\n- 중공 구조의 2차 모멘트" 
-    },
-    { 
-      meshName: "part4", 
-      name: "Elbow Joint", 
-      description: "상완과 하완을 연결하며 굽힘 동작을 수행하는 팔꿈치 관절입니다.\n감속비: 1:100\n무게: 약 4.5kg\n\n⚠️ 주의사항: 백래시 0.02도 이내 유지 필요\n\n📖 시험 포인트:\n- 하모닉 드라이브 원리\n- 백래시와 정밀도의 관계\n- 토크 증폭 메커니즘" 
-    },
-    { 
-      meshName: "part5", 
-      name: "Forearm Link", 
-      description: "로봇 팔의 하완부로 정밀한 위치 제어를 담당합니다.\n길이: 380mm\n무게: 약 2.6kg\n\n⚠️ 주의사항: 충격에 취약, 낙하 방지 필수\n\n📖 시험 포인트:\n- 비강도(Specific Strength) 개념\n- 동적 하중과 정적 하중\n- 강성 설계와 진동 특성" 
-    },
-    { 
-      meshName: "part6", 
-      name: "Wrist Pitch Joint", 
-      description: "하완과 엔드 이펙터를 연결하는 손목 관절입니다.\n회전 범위: ±90도\n무게: 약 1.8kg\n\n⚠️ 주의사항: 케이블 배선 간섭 주의\n\n📖 시험 포인트:\n- 3축 손목 메커니즘\n- 짐벌락(Gimbal Lock) 현상\n- 오일러 각과 쿼터니언 변환" 
-    },
-    { 
-      meshName: "part7", 
-      name: "Wrist Roll Joint", 
-      description: "엔드 이펙터의 방향을 조절하는 손목 회전 부품입니다.\n회전 범위: ±270도\n무게: 약 1.2kg\n\n⚠️ 주의사항: 연속 회전 시 슬립링 마모 점검\n\n📖 시험 포인트:\n- 슬립링 원리와 구조\n- 연속 회전 메커니즘\n- 전력/신호 전달 방식" 
-    },
-    { 
-      meshName: "part8", 
-      name: "Tool Flange", 
-      description: "그리퍼나 도구를 장착할 수 있는 엔드 이펙터 마운트입니다.\n규격: ISO 9409-1-50\n무게: 약 0.5kg\n\n⚠️ 주의사항: 체결 토크 8N·m 준수\n\n📖 시험 포인트:\n- 표준 인터페이스 규격\n- 센터링 정밀도\n- 반복 위치 정밀도(Repeatability)" 
-    },
-  ],
   "Robot Gripper": [
     { 
       meshName: "base_gear", 
@@ -310,8 +269,8 @@ export const mapModelData = async (apiData) => {
     if (assemblyModelUrl.startsWith("http")) {
       result.push({
         id: "assembly",
-        name: "전체 조립품",
-        description: "모든 부품이 조립된 완성 모델입니다.",
+        name: apiData.name ,
+        description: apiData.description || "모든 부품이 조립된 완성 모델입니다.",
         model: assemblyModelUrl,
         meshName: "assembly",
         isAssembly: true,
@@ -322,8 +281,8 @@ export const mapModelData = async (apiData) => {
         if (signedUrl && is3DModelFile(signedUrl)) {
           result.push({
             id: "assembly",
-            name: "전체 조립품",
-            description: "모든 부품이 조립된 완성 모델입니다.",
+            name: apiData.name ,
+            description: apiData.description || "모든 부품이 조립된 완성 모델입니다.",
             model: signedUrl,
             meshName: "assembly",
             isAssembly: true,

@@ -12,7 +12,7 @@ import {
   updateNote,
   deleteNote,
 } from "../../utils/noteDB";
-import { getLastChatId } from "../../api/aiDB";
+import { getLastChatId, getChatById } from "../../api/aiDB";
 
 const parseDate = (dateStr) => {
   const [dayPart, monthStr, timePart] = dateStr.split(" ");
@@ -64,6 +64,8 @@ const RightContainer = ({
   setAiChats,
   modelId,
   modelName,
+  onMessagesUpdate,
+  setPdfSummary,
 }) => {
   const [notes, setNotes] = useState([]);
   const [isAdding, setIsAdding] = useState(false);
@@ -77,6 +79,8 @@ const RightContainer = ({
   const [width, setWidth] = useState(0);
 
   const [currentChatId, setCurrentChatId] = useState(null);
+
+  const [messages, setMessages] = useState([]);
 
   useEffect(() => {
     if (modelId) {
@@ -197,25 +201,50 @@ const RightContainer = ({
     }, 150);
   };
 
-  const handleAiChatSelect = () => setIsMenuOpen(false);
+  const handleAiChatSelect = async (chatId) => {
+    if (!chatId) return;
+
+    try {
+      // 1. 현재 선택된 채팅 ID 상태 변경
+      setCurrentChatId(chatId);
+
+      // 2. (선택사항) 해당 채팅의 메시지 데이터를 DB에서 가져와서 상태에 세팅
+      // 만약 useEffect가 currentChatId를 감시하고 있다면 이 과정은 자동으로 처리될 수도 있습니다.
+      const chatData = await getChatById(chatId);
+      setMessages(chatData.messages || []);
+
+      console.log(`${chatId}번 대화로 전환되었습니다.`);
+    } catch (error) {
+      console.error("대화 불러오기 실패:", error);
+    }
+  };
 
   const handleNewAiChat = async () => {
+    const initialMsg = [
+      {
+        id: Date.now(),
+        role: "assistant",
+        content: `안녕하세요! 무엇이 궁금하신가요?`,
+      },
+    ];
+
     try {
-      // 1. 마지막으로 생성된 ID를 가져와서 +1 해줍니다.
       const lastId = await getLastChatId();
       const newId = (Number(lastId) || 0) + 1;
 
-      // 2. 새로운 ID를 설정하면 AssistantAi가 이를 감지하여 새 방을 생성합니다.
+      // 1. 확실하게 숫자로 변환하여 ID 설정
       setCurrentChatId(newId);
 
-      // 3. 메뉴를 닫습니다.
-      setIsMenuOpen(false);
+      // 2. 메시지 초기화
+      setMessages(initialMsg);
 
-      console.log("🚀 새 채팅 세션 생성 완료: ID", newId);
+      setIsMenuOpen(false);
+      console.log("🚀 새 채팅 세션 준비 완료: ID", newId);
     } catch (error) {
       console.error("새 채팅 생성 중 오류 발생:", error);
     }
   };
+
   useEffect(() => {
     if (activeTab === "note" && isAdding && scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
@@ -314,6 +343,7 @@ const RightContainer = ({
               onSelectChat={handleAiChatSelect}
               onNewChat={handleNewAiChat}
               modelId={modelId}
+              currentChatId={currentChatId}
             />
           ))}
 
@@ -348,6 +378,10 @@ const RightContainer = ({
             modelName={modelName}
             currentChatId={currentChatId}
             setCurrentChatId={setCurrentChatId}
+            messages={messages} // 추가
+            setMessages={setMessages} // 추가
+            setPdfSummary={setPdfSummary}
+            onMessagesUpdate={onMessagesUpdate}
           />
         )}
       </div>

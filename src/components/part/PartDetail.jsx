@@ -178,12 +178,14 @@ const PartDetail = ({ selectedPart, onMaterialSelect }) => {
               key={mat.id}
               onClick={() => {
                 if (!isDragging) {
-                  setSelectedMaterial(mat); // UI 상의 텍스트와 강조는 유지
+                  // 1. UI 표시를 위해 상태 업데이트 (비동기)
+                  setSelectedMaterial(mat);
 
-                  // ✨ 핵심: ID가 0(기본 재질)이면 null을 전달하여 파란색 상태로 유도
+                  // 2. 부모에게는 '상태'가 아니라 '클릭한 놈(mat)'을 직접 전달 (즉시 반영)
                   if (mat.id === 0) {
                     onMaterialSelect(null);
                   } else {
+                    // 🚨 selectedMaterial.props가 아니라 mat.materialProps를 직접 씁니다!
                     const propsToSend = mat.materialProps || mat.props;
                     if (onMaterialSelect && propsToSend) {
                       onMaterialSelect(propsToSend);
@@ -191,15 +193,14 @@ const PartDetail = ({ selectedPart, onMaterialSelect }) => {
                   }
                 }
               }}
-              className={`flex-shrink-0 w-10 h-10 rounded-xl transition-all border-2 
-                ${selectedMaterial.name === mat.name ? "border-[#4ade80]" : "border-transparent opacity-70"}
+              className={`flex-shrink-0 w-12 h-12 rounded-xl transition-all border-px bg-gray-3 p-2
+                ${selectedMaterial.name === mat.name ? "border border-main-1 shadow-md" : "border-transparent opacity-70"}
               `}
             >
-              <div
-                className="w-full h-full rounded-lg bg-gray-200 shadow-inner"
-                style={{
-                  background: `radial-gradient(circle at 30% 30%, #888, #222)`,
-                }}
+              <img
+                src={mat.img}
+                alt={mat.name}
+                className="w-full h-full object-cover rounded-xl"
               />
             </div>
           ))}

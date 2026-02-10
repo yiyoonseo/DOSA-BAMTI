@@ -1,14 +1,22 @@
 // src/constants/materialData.js
+import Normal from '../assets/material/empty.svg';
+import CarbonFiber from '../assets/material/carbon fibre.svg';
+import Aluminum from '../assets/material/aluminium.svg';
+import ReinforcedPlastic from '../assets/material/plastic.svg';
+import TitaniumAlloy from '../assets/material/titanium.svg';
+import MatteBlackCoating from '../assets/material/matt black.svg';
 
 export const MATERIAL_LIST = [
   {
     id: 0, // 0번으로 기본 재질 추가
+    img: Normal,
     name: "기본 재질",
     desc: "기체 설계 시 표준으로 적용되는 경량 합성 소재입니다.",
     materialProps: null,
   },
   {
     id: 1,
+    img: CarbonFiber,
     name: "카본 파이버",
     desc: "초경량 고강성 소재로 드론의 비행 시간을 극대화합니다.",
     materialProps: {
@@ -21,6 +29,7 @@ export const MATERIAL_LIST = [
   },
   {
     id: 2,
+    img: Aluminum,
     name: "알루미늄 6061",
     desc: "내식성이 뛰어나고 구조적 강도가 우수한 항공 등급 금속입니다.",
     materialProps: {
@@ -33,6 +42,7 @@ export const MATERIAL_LIST = [
   },
   {
     id: 3,
+    img: ReinforcedPlastic,
     name: "강화 플라스틱",
     desc: "충격 흡수력이 뛰어나며 유지보수 비용이 저렴한 범용 소재입니다.",
     materialProps: {
@@ -45,6 +55,7 @@ export const MATERIAL_LIST = [
   },
   {
     id: 4,
+    img: TitaniumAlloy,
     name: "티타늄 합금",
     desc: "극한의 환경에서도 변형이 없는 최고급 고강도 합금입니다.",
     materialProps: {
@@ -57,6 +68,7 @@ export const MATERIAL_LIST = [
   },
   {
     id: 5,
+    img: MatteBlackCoating,
     name: "매트 블랙 코팅",
     desc: "빛 반사를 최소화하여 스텔스 비행 및 고급스러운 외관을 제공합니다.",
     materialProps: {
