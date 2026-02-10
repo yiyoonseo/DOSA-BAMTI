@@ -7,6 +7,7 @@ import {
   FileText,
   Download,
   Trash2,
+  X,
 } from "lucide-react";
 
 // 모델 ID와 이름 매핑
@@ -197,16 +198,22 @@ const PdfModal = ({ isOpen, onClose, allModels }) => {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg w-[900px] max-h-[85vh] overflow-hidden flex flex-col shadow-2xl">
+    <div
+      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white rounded-lg w-[900px] max-h-[85vh] overflow-hidden flex flex-col shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* 헤더 */}
         <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center bg-gray-50">
           <h2 className="t-20-semi text-gray-900">PDF 출력 기록</h2>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 text-3xl leading-none w-8 h-8 flex items-center justify-center rounded hover:bg-gray-200 transition-colors"
+            className="p-2 hover:bg-gray-100 rounded-full transition-colors"
           >
-            ×
+            <X className="w-6 h-6 text-gray-400 hover:text-gray-7" />
           </button>
         </div>
 

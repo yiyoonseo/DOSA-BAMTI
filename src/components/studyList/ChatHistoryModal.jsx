@@ -66,8 +66,14 @@ const ChatHistoryModal = ({ isOpen, onClose, allModels }) => {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[10000] animate-fade-in">
-      <div className="bg-white rounded-xl w-[850px] h-[80vh] overflow-hidden flex flex-col">
+    <div
+      className="fixed inset-0 bg-black/50 flex items-center justify-center z-[10000] animate-fade-in"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white rounded-xl w-[850px] h-[80vh] overflow-hidden flex flex-col h-fit"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center shrink-0">
           <div className="flex items-center gap-3">
             {/* ⬅️ 뒤로가기 버튼 추가: selectedChat이 있을 때만 표시 */}
