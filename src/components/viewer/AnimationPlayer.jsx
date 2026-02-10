@@ -118,22 +118,27 @@ function AnimationPlayer({
 
     gltf.scene.traverse((child) => {
       if (child.isMesh) {
-        // 1. 전체 선택 모드인지 확인 (selectedPartMesh가 없거나 'assembly'일 때)
+        // 1. 상태 파악
         const isAssemblyMode =
           !selectedPartMesh || selectedPartMesh === "assembly";
-
-        // 2. 개별 부품이 선택되었는지 확인
         const isTarget = isAssemblyMode
           ? true
           : isNameMatch(child.name, selectedPartMesh);
 
+        // 2. 재질 적용 로직 세분화
         if (isTarget) {
-          // 전체 모드이거나 선택된 부품일 때 재질 적용
           if (overrideMaterial) {
+            // 재질이 선택된 경우 (카본, 알루미늄 등 적용)
             applyPropsToMaterial(child.material, overrideMaterial);
           } else {
-            // 기본 재질 선택 시 파란색 하이라이트(또는 기본색)
-            applyBlueHighlight(child.material);
+            // 🚨 핵심 수정 구간: 기본 재질(null)을 선택했을 때
+            if (isAssemblyMode) {
+              // 전체 모드라면 하이라이트 없이 기본 회색으로!
+              applyDefaultGrey(child.material);
+            } else {
+              // 특정 부품 선택 모드라면 파란색으로 하이라이트!
+              applyBlueHighlight(child.material);
+            }
           }
         } else {
           // 선택되지 않은 부품은 회색 처리
