@@ -25,10 +25,10 @@ const NoteInput = ({
   const [selectedType, setSelectedType] = useState("종류");
   const [activeMenu, setActiveMenu] = useState(null);
 
-  const [categoryList, setCategoryList] = useState([
-    "부품 2 어쩌구",
-    "부품 3 어쩌구",
-  ]);
+  const [categoryList, setCategoryList] = useState(() => {
+    const saved = localStorage.getItem("user_note_categories");
+    return saved ? JSON.parse(saved) : ["기본"]; // 기본값 설정 가능
+  });
   const [newCategoryInput, setNewCategoryInput] = useState("");
   const [isAddingCategory, setIsAddingCategory] = useState(false);
 
@@ -37,6 +37,17 @@ const NoteInput = ({
 
   const imageInputRef = useRef(null);
   const fileInputRef = useRef(null);
+
+  useEffect(() => {
+    if (activeMenu !== "category") {
+      setIsAddingCategory(false);
+      setNewCategoryInput("");
+    }
+  }, [activeMenu]);
+
+  useEffect(() => {
+    localStorage.setItem("user_note_categories", JSON.stringify(categoryList));
+  }, [categoryList]);
 
   useEffect(() => {
     if (initialData) {
@@ -52,28 +63,41 @@ const NoteInput = ({
   const handleFileChange = (e, type) => {
     const file = e.target.files[0];
     if (file) {
-      const previewUrl = type === "image" ? URL.createObjectURL(file) : null;
-
-      const newAttach = {
-        id: Date.now(),
-        type,
-        name: file.name,
-        file,
-        previewUrl,
-      };
-      setAttachments((prev) => [...prev, newAttach]);
+      if (type === "image") {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const base64String = reader.result; // 이미지를 Base64 문자열로 변환
+          const newAttach = {
+            id: Date.now(),
+            type,
+            name: file.name,
+            previewUrl: base64String, // 이제 이 주소는 영구적입니다(데이터 자체가 저장됨)
+          };
+          setAttachments((prev) => [...prev, newAttach]);
+        };
+        reader.readAsDataURL(file);
+      } else {
+        // 일반 파일은 기존 로직 유지 (필요 시)
+        const newAttach = {
+          id: Date.now(),
+          type,
+          name: file.name,
+          file,
+        };
+        setAttachments((prev) => [...prev, newAttach]);
+      }
       setIsAttachMenuOpen(false);
     }
   };
 
-  const handleLinkAdd = () => {
-    const url = window.prompt("URL 주소를 입력해주세요:");
-    if (url) {
-      const newAttach = { id: Date.now(), type: "link", name: url };
-      setAttachments((prev) => [...prev, newAttach]);
-      setIsAttachMenuOpen(false);
-    }
-  };
+  // const handleLinkAdd = () => {
+  //   const url = window.prompt("URL 주소를 입력해주세요:");
+  //   if (url) {
+  //     const newAttach = { id: Date.now(), type: "link", name: url };
+  //     setAttachments((prev) => [...prev, newAttach]);
+  //     setIsAttachMenuOpen(false);
+  //   }
+  // };
 
   const removeAttachment = (id) => {
     setAttachments((prev) => prev.filter((item) => item.id !== id));
@@ -83,10 +107,7 @@ const NoteInput = ({
     if (!content.trim() && attachments.length === 0) return;
     const finalCategory =
       selectedCategory === "카테고리" ? "기타" : selectedCategory;
-    const finalType =
-      selectedType === "종류" || selectedType === "일반"
-        ? "general"
-        : "important";
+    const finalType = selectedType === "important" ? "important" : "general";
 
     onSave({
       title,
@@ -104,10 +125,24 @@ const NoteInput = ({
 
   const handleAddCustomCategory = () => {
     if (newCategoryInput.trim()) {
-      setCategoryList([...categoryList, newCategoryInput.trim()]);
+      // 중복 방지 로직 추가하면 더 좋습니다.
+      if (!categoryList.includes(newCategoryInput.trim())) {
+        setCategoryList([...categoryList, newCategoryInput.trim()]);
+      }
       setSelectedCategory(newCategoryInput.trim());
       setNewCategoryInput("");
+      setIsAddingCategory(false);
       setActiveMenu(null);
+    }
+  };
+
+  const handleRemoveCategory = (e, catToDelete) => {
+    e.stopPropagation();
+    const updatedList = categoryList.filter((cat) => cat !== catToDelete);
+    setCategoryList(updatedList); // 업데이트 시 useEffect에 의해 스토리지에도 반영됨
+
+    if (selectedCategory === catToDelete) {
+      setSelectedCategory("카테고리");
     }
   };
 
@@ -140,7 +175,7 @@ const NoteInput = ({
         ) : (
           <button
             onClick={onOpenAiNote}
-            className={`flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-bold transition-all cursor-pointer ${
+            className={`flex items-center gap-1 text-[10px] px-2 py-1 rounded-full font-bold transition-all cursor-pointer ${
               isAiNoteOpen
                 ? "bg-ai-gradient text-white"
                 : "bg-white border border-ai-gradient text-main-1 hover:bg-blue-50"
@@ -166,7 +201,7 @@ const NoteInput = ({
         <input
           type="text"
           placeholder="제목"
-          className="w-full pt-5 bg-transparent text-sm font-bold text-gray-900 placeholder-gray-400 outline-none pb-2"
+          className="w-full pt-5 pl-2 bg-transparent b-16-semi text-gray-900 placeholder-gray-400 outline-none pb-2"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           autoFocus
@@ -198,7 +233,7 @@ const NoteInput = ({
         )}
         <textarea
           placeholder="메모를 작성하세요"
-          className="w-full bg-transparent text-sm text-gray-700 resize-none outline-none min-h-[60px] placeholder-gray-400"
+          className="w-full pl-2 bg-transparent b-14-reg-160 text-gray-700 resize-none outline-none min-h-[60px] placeholder-gray-400"
           value={content}
           onChange={(e) => setContent(e.target.value)}
         />
@@ -239,22 +274,22 @@ const NoteInput = ({
                 <div className="absolute bottom-full left-0 mb-2 w-[140px] bg-white rounded-xl border border-gray-100 p-1 z-30 animate-fade-in-up">
                   <button
                     onClick={() => imageInputRef.current.click()}
-                    className="flex items-center gap-2 w-full p-2 hover:bg-gray-50 rounded-lg text-xs text-gray-600 transition-colors"
+                    className="flex items-center gap-2 w-full py-3 px-4 hover:bg-gray-50 rounded-lg b-14-med text-gray-6 transition-colors"
                   >
                     <Camera size={14} /> 사진 첨부
                   </button>
                   <button
                     onClick={() => fileInputRef.current.click()}
-                    className="flex items-center gap-2 w-full p-2 hover:bg-gray-50 rounded-lg text-xs text-gray-600 transition-colors"
+                    className="flex items-center gap-2 w-full py-2 px-4 hover:bg-gray-50 rounded-lg b-14-med text-gray-6 transition-colors"
                   >
                     <FolderPlus size={14} /> 파일 첨부
                   </button>
-                  <button
+                  {/* <button
                     onClick={handleLinkAdd}
-                    className="flex items-center gap-2 w-full p-2 hover:bg-gray-50 rounded-lg text-xs text-gray-600 transition-colors"
+                    className="flex items-center gap-2 w-full p-2 hover:bg-gray-50 rounded-lg d-12-reg text-gray-600 transition-colors"
                   >
                     <LinkIcon size={14} /> 링크 첨부
-                  </button>
+                  </button> */}
                 </div>
               )}
             </div>
@@ -265,25 +300,38 @@ const NoteInput = ({
                 onClick={() =>
                   setActiveMenu(activeMenu === "category" ? null : "category")
                 }
-                className={`px-3 py-1.5 rounded-full text-xs transition-colors ${selectedCategory !== "카테고리" ? "bg-main-2 text-white" : "bg-bg-2 text-gray-700 border border-gray-500 hover:bg-gray-50"}`}
+                className={`px-3 py-1.5 rounded-full d-12-med transition-colors ${selectedCategory !== "카테고리" ? "bg-main-2 text-white" : "bg-bg-2 text-gray-700 border border-gray-500 hover:bg-gray-50"}`}
               >
                 {selectedCategory}
               </button>
 
               {activeMenu === "category" && (
-                <div className="absolute bottom-full left-0 mb-2 w-48 bg-white rounded-xl border border-blue-100 overflow-hidden z-30 animate-fade-in">
+                <div className="absolute bottom-full left-0 mb-2 w-48 bg-white rounded-xl border border-blue-100 overflow-hidden z-30 animate-fade-in shadow-lg">
                   <div className="p-2 space-y-1">
                     {categoryList.map((cat, idx) => (
-                      <button
+                      <div
                         key={idx}
-                        onClick={() => {
-                          setSelectedCategory(cat);
-                          setActiveMenu(null);
-                        }}
-                        className="w-full text-left px-3 py-2 text-xs font-bold text-gray-900 hover:bg-[#EDF2F6] rounded-lg transition-colors"
+                        className="group flex items-center gap-1 hover:bg-[#EDF2F6] rounded-[5px]"
                       >
-                        {cat}
-                      </button>
+                        {/* 카테고리 선택 버튼 */}
+                        <button
+                          onClick={() => {
+                            setSelectedCategory(cat);
+                            setActiveMenu(null);
+                          }}
+                          className="flex-grow text-left px-3 py-2 d-12-med text-gray-900 transition-colors"
+                        >
+                          {cat}
+                        </button>
+
+                        {/* ⭐️ 삭제 버튼 (호버 시 나타남) */}
+                        <button
+                          onClick={(e) => handleRemoveCategory(e, cat)}
+                          className="p-2 text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
                     ))}
 
                     <div className="pt-2 mt-1 border-t border-gray-50 px-1">
@@ -292,7 +340,7 @@ const NoteInput = ({
                           <input
                             type="text"
                             placeholder="새 카테고리 입력"
-                            className="w-full text-xs px-2 py-1.5 outline-none text-gray-600 placeholder-gray-300 bg-transparent"
+                            className="w-full d-12-med px-2 py-1.5 outline-none text-gray-600 placeholder-gray-300 bg-transparent"
                             value={newCategoryInput}
                             onChange={(e) =>
                               setNewCategoryInput(e.target.value)
@@ -305,7 +353,7 @@ const NoteInput = ({
                           <button
                             onClick={handleAddCustomCategory}
                             disabled={!newCategoryInput.trim()}
-                            className={`w-full text-center mt-1 py-2 text-xs font-bold rounded-lg transition-colors flex items-center justify-center gap-1 ${
+                            className={`w-full text-center mt-1 py-2 b-14-semi rounded-lg transition-colors flex items-center justify-center gap-1 ${
                               newCategoryInput.trim()
                                 ? "bg-[#EDF2F6] text-gray-600 hover:bg-[#E0E0E0]"
                                 : "bg-[#F5F7FA] text-gray-400"
@@ -334,11 +382,11 @@ const NoteInput = ({
                 onClick={() =>
                   setActiveMenu(activeMenu === "type" ? null : "type")
                 }
-                className={`px-3 py-1.5 rounded-full text-xs border transition-colors ${
+                className={`px-3 py-1.5 rounded-full d-12-med border transition-colors ${
                   selectedType === "important"
-                    ? "bg-[#FF9191] border-[#FF9191] text-white" // 중요 선택 시 (Red)
+                    ? "bg-acc-red border-acc-red text-white" // 중요 선택 시 (Red)
                     : selectedType === "general"
-                      ? "bg-[#68A2FF] border-[#68A2FF] text-white" // 일반 선택 시 (Blue)
+                      ? "bg-acc-blue border-acc-blue text-white" // 일반 선택 시 (Blue)
                       : "bg-bg-2 border-gray-500 text-gray-500 hover:bg-gray-50" // 선택 안됨 (Default)
                 }`}
               >
@@ -357,7 +405,7 @@ const NoteInput = ({
                         setSelectedType("important");
                         setActiveMenu(null);
                       }}
-                      className="w-full text-left px-3 py-2 text-xs text-gray-600 hover:bg-[#EFEFEF] hover:font-bold rounded-lg transition-colors"
+                      className="w-full text-left px-3 py-2 d-12-med text-gray-600 hover:bg-[#EFEFEF] hover:font-bold rounded-lg transition-colors"
                     >
                       중요
                     </button>
@@ -366,7 +414,7 @@ const NoteInput = ({
                         setSelectedType("general");
                         setActiveMenu(null);
                       }}
-                      className="w-full text-left px-3 py-2 text-xs text-gray-600 hover:bg-[#EFEFEF] hover:font-bold rounded-lg transition-colors"
+                      className="w-full text-left px-3 py-2 d-12-med text-gray-600 hover:bg-[#EFEFEF] hover:font-bold rounded-lg transition-colors"
                     >
                       일반
                     </button>

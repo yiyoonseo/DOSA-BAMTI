@@ -7,10 +7,15 @@ import ReportExporter from "../components/viewer/report/ReportExporter";
 import { getModelDetail } from "../api/modelAPI";
 import { getModelById } from "../api/modelAPI";
 import { formatSystemName } from "../utils/formatModelName";
+import { fetchAiBriefing } from "../api/aiAPI";
 
 const Viewer = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+
+  const [isLightOn, setIsLightOn] = useState(true); // 조명 상태 추가
+
+  const [currentPartForReport, setCurrentPartForReport] = useState(null);
 
   // API 데이터 관련
   const [loading, setLoading] = useState(true);
@@ -31,6 +36,58 @@ const Viewer = () => {
   const containerRef = useRef(null);
   const captureRef = useRef(null);
 
+  const [modelName, setModelName] = useState("");
+
+  const [currentChatMessages, setCurrentChatMessages] = useState([]);
+
+  //PDF관련
+  const [pdfSummary, setPdfSummary] = useState([]);
+
+  useEffect(() => {
+    const generateReportBriefing = async () => {
+      // 유의미한 메시지가 쌓였을 때만 실행 (로그상 24개 등 기준)
+      if (currentChatMessages.length < 2) return;
+
+      try {
+        const response = await fetchAiBriefing(currentChatMessages);
+
+        if (response && response.summary) {
+          const parsed =
+            typeof response.summary === "string"
+              ? JSON.parse(response.summary)
+              : response.summary;
+
+          // 보고서Exporter에 전달할 배열 형식으로 저장
+          setPdfSummary([
+            {
+              title: parsed.title || "종합 학습 분석 브리핑",
+              items: parsed.items || [],
+              date: new Date().toLocaleDateString(),
+            },
+          ]);
+        }
+      } catch (error) {
+        console.error("보고서용 브리핑 생성 실패:", error);
+      }
+    };
+
+    generateReportBriefing();
+  }, [currentChatMessages]);
+
+  // 2. 새로운 요약을 배열에 추가하는 함수 (선택 사항: 더 명확한 관리를 위해)
+  const handleAddPdfSummary = (newSummary) => {
+    setPdfSummary((prev) => [
+      ...prev,
+      {
+        ...newSummary,
+        date: new Date().toLocaleDateString(), // 날짜 추가
+      },
+    ]);
+  };
+
+  // ✅ id 값 확인 로그 추가
+  useEffect(() => {}, [id]);
+
   // API 데이터 로딩
   useEffect(() => {
     const loadModelData = async () => {
@@ -45,15 +102,12 @@ const Viewer = () => {
       setError(null);
 
       try {
-        console.log("🚀 Viewer - Loading model with ID:", id);
-
         const data = await getModelDetail(id);
 
         if (!data) {
           throw new Error(`ID ${id}에 해당하는 모델을 찾을 수 없습니다.`);
         }
 
-        console.log("📥 Viewer - API response:", data);
         setApiData(data);
       } catch (err) {
         console.error("❌ 데이터 로딩 실패:", err);
@@ -66,8 +120,6 @@ const Viewer = () => {
     loadModelData();
   }, [id]);
 
-  const [modelName, setModelName] = useState("");
-
   useEffect(() => {
     const fetchAndSetModelName = async () => {
       if (!id) return;
@@ -77,7 +129,6 @@ const Viewer = () => {
           // "Machine Vice" -> "MACHINE_VICE" 형태로 변환
           const formattedName = formatSystemName(currentModel.name);
           setModelName(formattedName);
-          console.log("✅ Viewer - 모델명 설정 완료:", formattedName);
         }
       } catch (err) {
         console.error("모델명 로드 실패:", err);
@@ -86,7 +137,7 @@ const Viewer = () => {
     fetchAndSetModelName();
   }, [id]);
 
-  // 👇 리사이즈 핸들러 (접기 로직 추가)
+  // 리사이즈 핸들러 (접기 로직 추가)
   const handleMouseDown = (e) => {
     e.preventDefault();
     setIsDragging(true);
@@ -100,14 +151,14 @@ const Viewer = () => {
       const deltaPercent = (deltaX / containerWidth) * 100;
       let newWidth = startWidth + deltaPercent;
 
-      // 👇 최소값: 15% 미만이면 접기
+      // 최소값: 15% 미만이면 접기
       if (newWidth < 15) {
         setIsCollapsed(true);
         setRightPanelWidth(33); // 다시 펼칠 때를 위해 기본값 유지
         return;
       }
 
-      // 👇 최대값 제한
+      // 최대값 제한
       if (newWidth > 50) newWidth = 50;
       if (newWidth < 20) newWidth = 20;
 
@@ -134,6 +185,25 @@ const Viewer = () => {
     setIsCollapsed(false);
     if (tab) setActiveTab(tab);
   };
+
+  // const briefingHistory = aiChats
+  //   .map((chat) => {
+  //     try {
+  //       // AiBriefing.jsx와 동일한 파싱 로직 적용
+  //       const parsed =
+  //         typeof chat.summary === "string"
+  //           ? JSON.parse(chat.summary)
+  //           : chat.summary;
+  //       return {
+  //         title: parsed?.title || chat.title || "학습 브리핑",
+  //         items: parsed?.items || [],
+  //         date: new Date(chat.lastUpdated).toLocaleDateString(),
+  //       };
+  //     } catch (e) {
+  //       return null;
+  //     }
+  //   })
+  //   .filter(Boolean);
 
   // 로딩 중
   if (loading) {
@@ -173,10 +243,17 @@ const Viewer = () => {
       <header className="h-16 shrink-0 flex items-center justify-between px-6 z-10">
         <div className="flex items-center gap-4">
           <button
-            onClick={() => navigate("/study-list")}
-            className="p-2 rounded hover:bg-gray-200 transition-colors"
+            onClick={(e) => {
+              e.stopPropagation(); // 부모 요소로의 이벤트 전파 방지
+              navigate("/study-list", { replace: true }); // 히스토리 스택 꼬임 방지
+            }}
+            className="p-2 rounded-[8px] hover:bg-main-1/30 transition-colors"
           >
-            <Menu className="text-gray-700" size={24} strokeWidth={2.5} />
+            <ChevronLeft
+              className="text-gray-700"
+              size={24}
+              strokeWidth={2.5}
+            />
           </button>
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 bg-gray-5 rounded-lg"></div>
@@ -185,10 +262,13 @@ const Viewer = () => {
             </span>
           </div>
         </div>
+
         <ReportExporter
           captureRef={captureRef}
-          currentPart={null}
-          chatHistory={aiChats}
+          currentPart={currentPartForReport}
+          modelId={id} // ✅ id가 제대로 있는지 확인
+          modelName={modelName}
+          chatHistory={pdfSummary}
         />
       </header>
 
@@ -204,6 +284,7 @@ const Viewer = () => {
             className="flex-1 h-full min-w-0 transition-all duration-300 ease-out"
           >
             <LeftContainer
+              onPartSelect={(part) => setCurrentPartForReport(part)}
               apiData={apiData}
               showAiNote={showAiNote}
               setShowAiNote={setShowAiNote}
@@ -211,6 +292,8 @@ const Viewer = () => {
               floatingMessages={floatingMessages}
               setFloatingMessages={setFloatingMessages}
               modelId={id}
+              isLightOn={isLightOn}
+              setIsLightOn={setIsLightOn}
             />
           </div>
 
@@ -240,6 +323,8 @@ const Viewer = () => {
               setAiChats={setAiChats}
               modelId={id}
               modelName={modelName}
+              onMessagesUpdate={setCurrentChatMessages}
+              setPdfSummary={setPdfSummary}
             />
           </div>
 

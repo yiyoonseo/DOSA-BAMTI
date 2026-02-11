@@ -1,8 +1,8 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { motion, useMotionValue } from "framer-motion";
 import { MATERIAL_LIST } from "../../db/materialDB";
 
-const PartDetail = ({ selectedPart, onMaterialSelect }) => {
+const PartDetail = ({ selectedPart, onMaterialSelect, onHeightChange }) => {
   const [leftWidth, setLeftWidth] = useState(65);
   const [height, setHeight] = useState(200);
   const [isHidden, setIsHidden] = useState(false);
@@ -11,6 +11,23 @@ const PartDetail = ({ selectedPart, onMaterialSelect }) => {
     name: "기본 재질",
     desc: "기체 설계 시 표준으로 적용되는 경량 합성 소재입니다.",
   });
+
+  // 높이가 바뀔 때마다 부모(LeftContainer)에게 알림
+  useEffect(() => {
+    if (onHeightChange) {
+      // 숨겨진 상태일 때는 최소 높이(40)만 반영, 아닐 때는 현재 높이 반영
+      onHeightChange(isHidden ? 40 : height);
+    }
+  }, [height, isHidden, onHeightChange]);
+
+  // 💡 2. 높이 제한 설정: 슬라이더 전까지만 올라가도록 maxHeight 조절
+  // 윈도우 높이에 따라 적절히 제한 (예: 264px)
+  const handleResize = (moveE) => {
+    const deltaY = startY - moveE.clientY;
+    const newHeight = startHeight + deltaY;
+    // 최대 높이를 264px 정도로 제한하여 슬라이더 영역을 지키도록 함
+    setHeight(Math.min(Math.max(newHeight, 120), 264));
+  };
 
   // 재질 데이터 예시 (나중에 실제 데이터로 교체하세요)
   // const materialList = [
@@ -80,11 +97,11 @@ const PartDetail = ({ selectedPart, onMaterialSelect }) => {
         display: "flex",
         height: `${height}px`,
         position: "absolute",
-        left: "150px",
-        right: "40px",
-        bottom: "20px",
+        width: "100%",
+        bottom: "0px",
         zIndex: 40,
         gap: "2px",
+        padding: "0 10px 10px 10px",
       }}
       className="pointer-events-auto"
     >
@@ -99,7 +116,7 @@ const PartDetail = ({ selectedPart, onMaterialSelect }) => {
           const onMouseMove = (moveE) => {
             const deltaY = startY - moveE.clientY;
             const newHeight = startHeight + deltaY;
-            setHeight(Math.min(Math.max(newHeight, 120), 264));
+            setHeight(Math.min(Math.max(newHeight, 150), 200));
           };
           const onMouseUp = () => {
             document.removeEventListener("mousemove", onMouseMove);
@@ -178,12 +195,14 @@ const PartDetail = ({ selectedPart, onMaterialSelect }) => {
               key={mat.id}
               onClick={() => {
                 if (!isDragging) {
-                  setSelectedMaterial(mat); // UI 상의 텍스트와 강조는 유지
+                  // 1. UI 표시를 위해 상태 업데이트 (비동기)
+                  setSelectedMaterial(mat);
 
-                  // ✨ 핵심: ID가 0(기본 재질)이면 null을 전달하여 파란색 상태로 유도
+                  // 2. 부모에게는 '상태'가 아니라 '클릭한 놈(mat)'을 직접 전달 (즉시 반영)
                   if (mat.id === 0) {
                     onMaterialSelect(null);
                   } else {
+                    // 🚨 selectedMaterial.props가 아니라 mat.materialProps를 직접 씁니다!
                     const propsToSend = mat.materialProps || mat.props;
                     if (onMaterialSelect && propsToSend) {
                       onMaterialSelect(propsToSend);
@@ -191,15 +210,14 @@ const PartDetail = ({ selectedPart, onMaterialSelect }) => {
                   }
                 }
               }}
-              className={`flex-shrink-0 w-10 h-10 rounded-xl transition-all border-2 
-                ${selectedMaterial.name === mat.name ? "border-[#4ade80]" : "border-transparent opacity-70"}
+              className={`flex-shrink-0 w-12 h-12 rounded-xl transition-all border-px bg-gray-3 p-2
+                ${selectedMaterial.name === mat.name ? "border border-main-1 shadow-md" : "border-transparent opacity-70"}
               `}
             >
-              <div
-                className="w-full h-full rounded-lg bg-gray-200 shadow-inner"
-                style={{
-                  background: `radial-gradient(circle at 30% 30%, #888, #222)`,
-                }}
+              <img
+                src={mat.img}
+                alt={mat.name}
+                className="w-full h-full object-cover rounded-xl"
               />
             </div>
           ))}
